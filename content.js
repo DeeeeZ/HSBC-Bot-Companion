@@ -62,6 +62,453 @@ function logRPA(msg) {
 const REDIRECT_URL_KEYWORD = "GIBRfdRedirect";
 const ACCOUNTS_PAGE_HASH_KEYWORD = "/accounts/details/";
 
+// --- Progress Bar ---
+let progressBar = null;
+
+function createProgressBar() {
+    if (progressBar) return;
+
+    progressBar = document.createElement('div');
+    progressBar.id = 'hsbc-export-progress';
+    progressBar.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        color: #fff;
+        padding: 16px 24px;
+        z-index: 2147483647;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        display: none;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    `;
+    progressBar.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:20px;">
+            <div style="min-width:180px;">
+                <div id="progress-text" style="font-size:16px; font-weight:600;">Exporting... 0/0</div>
+                <div id="progress-current" style="color:#888; font-size:13px; margin-top:4px;">Starting...</div>
+            </div>
+            <div style="flex:1; max-width:500px;">
+                <div style="background:rgba(255,255,255,0.1); height:24px; border-radius:12px; overflow:hidden; border:1px solid rgba(255,255,255,0.2);">
+                    <div id="progress-fill" style="background:linear-gradient(90deg, #db0011 0%, #ff4444 100%); height:100%; width:0%; transition:width 0.3s ease; border-radius:12px;"></div>
+                </div>
+            </div>
+            <button id="progress-cancel" style="
+                background: transparent;
+                color: #ff6b6b;
+                border: 1px solid #ff6b6b;
+                padding: 8px 20px;
+                cursor: pointer;
+                border-radius: 6px;
+                font-weight: 600;
+                font-size: 14px;
+                transition: all 0.2s;
+            " onmouseover="this.style.background='#ff6b6b'; this.style.color='#fff';"
+               onmouseout="this.style.background='transparent'; this.style.color='#ff6b6b';">Cancel</button>
+        </div>
+    `;
+    document.body.appendChild(progressBar);
+
+    // Cancel button handler
+    document.getElementById('progress-cancel').onclick = () => {
+        exportAllState.cancelled = true;
+        logExportAll('Cancelling...');
+    };
+}
+
+function showProgress() {
+    if (!progressBar) createProgressBar();
+    progressBar.style.display = 'block';
+}
+
+function hideProgress() {
+    if (progressBar) progressBar.style.display = 'none';
+}
+
+function updateProgress(current, total, accountName) {
+    if (!progressBar) createProgressBar();
+    showProgress();
+
+    const fill = document.getElementById('progress-fill');
+    const text = document.getElementById('progress-text');
+    const currentEl = document.getElementById('progress-current');
+
+    const percent = total > 0 ? (current / total) * 100 : 0;
+
+    if (fill) fill.style.width = `${percent}%`;
+    if (text) text.textContent = `Exporting... ${current}/${total}`;
+    if (currentEl) currentEl.textContent = accountName || 'Processing...';
+}
+
+// --- Selective Export (Checkboxes) ---
+let checkboxesInjected = false;
+
+function injectCheckboxes() {
+    if (!isAccountsListPage()) return;
+
+    const rows = document.querySelectorAll('tbody.table__body tr.table__row--clickable');
+    if (rows.length === 0) return;
+
+    // Check if already injected
+    if (document.querySelector('.hsbc-select-checkbox')) {
+        checkboxesInjected = true;
+        return;
+    }
+
+    // Add header checkbox
+    const headerRow = document.querySelector('thead tr');
+    if (headerRow && !headerRow.querySelector('.hsbc-select-all-th')) {
+        const th = document.createElement('th');
+        th.className = 'hsbc-select-all-th';
+        th.style.cssText = 'width:40px; text-align:center; padding:8px;';
+        th.innerHTML = `
+            <input type="checkbox" class="hsbc-select-all" checked style="
+                width:18px;
+                height:18px;
+                cursor:pointer;
+                accent-color:#db0011;
+            ">
+        `;
+        headerRow.insertBefore(th, headerRow.firstChild);
+
+        // Select All handler
+        th.querySelector('.hsbc-select-all').addEventListener('change', (e) => {
+            const checked = e.target.checked;
+            document.querySelectorAll('.hsbc-select-checkbox').forEach(cb => {
+                cb.checked = checked;
+            });
+            updateSelectionCount();
+        });
+    }
+
+    // Add checkboxes to each row
+    rows.forEach((row, i) => {
+        if (row.querySelector('.hsbc-select-checkbox')) return;
+
+        const td = document.createElement('td');
+        td.style.cssText = 'width:40px; text-align:center; padding:8px;';
+        td.innerHTML = `
+            <input type="checkbox" class="hsbc-select-checkbox" data-index="${i}" checked style="
+                width:18px;
+                height:18px;
+                cursor:pointer;
+                accent-color:#db0011;
+            ">
+        `;
+
+        // Prevent row click when clicking checkbox
+        td.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        td.querySelector('.hsbc-select-checkbox').addEventListener('change', () => {
+            updateSelectionCount();
+            // Update "Select All" state
+            const allChecked = document.querySelectorAll('.hsbc-select-checkbox:checked').length ===
+                              document.querySelectorAll('.hsbc-select-checkbox').length;
+            const selectAll = document.querySelector('.hsbc-select-all');
+            if (selectAll) selectAll.checked = allChecked;
+        });
+
+        row.insertBefore(td, row.firstChild);
+    });
+
+    checkboxesInjected = true;
+    updateSelectionCount();
+}
+
+function updateSelectionCount() {
+    const checked = document.querySelectorAll('.hsbc-select-checkbox:checked').length;
+    const total = document.querySelectorAll('.hsbc-select-checkbox').length;
+    const btn = document.getElementById('hsbc-bot-export-all-btn');
+
+    if (btn && !exportAllState.isRunning) {
+        if (checked === total) {
+            btn.textContent = `Export All (${total})`;
+        } else {
+            btn.textContent = `Export Selected (${checked})`;
+        }
+    }
+}
+
+function getSelectedAccounts() {
+    const accounts = extractAccountsFromTable();
+    const checkboxes = document.querySelectorAll('.hsbc-select-checkbox');
+
+    if (checkboxes.length === 0) {
+        return accounts; // No checkboxes, return all
+    }
+
+    const selectedIndices = [];
+    checkboxes.forEach((cb, i) => {
+        if (cb.checked) selectedIndices.push(i);
+    });
+
+    return accounts.filter((_, i) => selectedIndices.includes(i));
+}
+
+// Find row element by account number (for refreshing stale DOM references)
+function findRowByAccountNumber(accountNumber) {
+    const rows = document.querySelectorAll('tbody.table__body tr.table__row--clickable');
+    for (const row of rows) {
+        const numberEl = row.querySelector('td.table__cell--sorted span');
+        if (numberEl && numberEl.textContent.trim() === accountNumber) {
+            return row;
+        }
+    }
+    return null;
+}
+
+// --- Export History ---
+const HISTORY_KEY = 'hsbc_export_history';
+
+function saveExportHistory(record) {
+    chrome.storage.local.get([HISTORY_KEY], (result) => {
+        const history = result[HISTORY_KEY] || [];
+        history.unshift(record); // Add to front
+
+        // Keep last 50 records
+        if (history.length > 50) {
+            history.splice(50);
+        }
+
+        chrome.storage.local.set({ [HISTORY_KEY]: history }, () => {
+            console.log('[HSBC Bot] Export history saved');
+        });
+    });
+}
+
+// --- Date Presets Modal ---
+
+function getDatePreset(preset) {
+    const today = new Date();
+    let start, end;
+
+    switch(preset) {
+        case 'yesterday':
+            const y = new Date(today);
+            y.setDate(y.getDate() - 1);
+            start = end = y;
+            break;
+        case 'last7':
+            end = new Date(today);
+            end.setDate(end.getDate() - 1);
+            start = new Date(end);
+            start.setDate(start.getDate() - 6);
+            break;
+        case 'lastMonth':
+            // Last day of previous month
+            end = new Date(today.getFullYear(), today.getMonth(), 0);
+            // First day of previous month
+            start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            break;
+        case 'mtd':
+            // First day of current month
+            start = new Date(today.getFullYear(), today.getMonth(), 1);
+            // Yesterday
+            end = new Date(today);
+            end.setDate(end.getDate() - 1);
+            break;
+        default:
+            // Default to yesterday
+            const def = new Date(today);
+            def.setDate(def.getDate() - 1);
+            start = end = def;
+    }
+
+    return {
+        start: start.toLocaleDateString('en-GB'),
+        end: end.toLocaleDateString('en-GB')
+    };
+}
+
+function showDateModal() {
+    return new Promise((resolve) => {
+        // Remove existing modal if any
+        const existing = document.getElementById('hsbc-date-modal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'hsbc-date-modal';
+        modal.innerHTML = `
+            <div style="position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:2147483647; display:flex; align-items:center; justify-content:center;">
+                <div style="background:#fff; padding:28px; border-radius:12px; min-width:420px; box-shadow:0 10px 40px rgba(0,0,0,0.3); font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                    <h3 style="margin:0 0 20px; color:#333; font-size:18px; font-weight:600;">Select Date Range</h3>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;">
+                        <button class="date-preset-btn" data-preset="yesterday" style="
+                            padding:12px 16px;
+                            border:1px solid #ddd;
+                            background:#fff;
+                            color:#333;
+                            border-radius:8px;
+                            cursor:pointer;
+                            font-size:14px;
+                            font-weight:500;
+                            transition:all 0.2s;
+                        ">Yesterday</button>
+                        <button class="date-preset-btn" data-preset="last7" style="
+                            padding:12px 16px;
+                            border:1px solid #ddd;
+                            background:#fff;
+                            color:#333;
+                            border-radius:8px;
+                            cursor:pointer;
+                            font-size:14px;
+                            font-weight:500;
+                            transition:all 0.2s;
+                        ">Last 7 Days</button>
+                        <button class="date-preset-btn" data-preset="lastMonth" style="
+                            padding:12px 16px;
+                            border:1px solid #ddd;
+                            background:#fff;
+                            color:#333;
+                            border-radius:8px;
+                            cursor:pointer;
+                            font-size:14px;
+                            font-weight:500;
+                            transition:all 0.2s;
+                        ">Last Month</button>
+                        <button class="date-preset-btn" data-preset="mtd" style="
+                            padding:12px 16px;
+                            border:1px solid #ddd;
+                            background:#fff;
+                            color:#333;
+                            border-radius:8px;
+                            cursor:pointer;
+                            font-size:14px;
+                            font-weight:500;
+                            transition:all 0.2s;
+                        ">Month to Date</button>
+                    </div>
+
+                    <div style="border-top:1px solid #eee; padding-top:16px; margin-bottom:20px;">
+                        <label style="display:block; color:#666; font-size:13px; margin-bottom:10px; font-weight:500;">Custom Range:</label>
+                        <div style="display:flex; gap:12px; align-items:center;">
+                            <div style="flex:1;">
+                                <label style="font-size:12px; color:#888; display:block; margin-bottom:4px;">From</label>
+                                <input type="text" id="modal-start" placeholder="dd/mm/yyyy" style="
+                                    width:100%;
+                                    padding:10px 12px;
+                                    border:1px solid #ddd;
+                                    border-radius:6px;
+                                    font-size:14px;
+                                    box-sizing:border-box;
+                                ">
+                            </div>
+                            <span style="color:#888; margin-top:18px;">→</span>
+                            <div style="flex:1;">
+                                <label style="font-size:12px; color:#888; display:block; margin-bottom:4px;">To</label>
+                                <input type="text" id="modal-end" placeholder="dd/mm/yyyy" style="
+                                    width:100%;
+                                    padding:10px 12px;
+                                    border:1px solid #ddd;
+                                    border-radius:6px;
+                                    font-size:14px;
+                                    box-sizing:border-box;
+                                ">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; justify-content:flex-end; gap:12px;">
+                        <button id="modal-cancel" style="
+                            padding:10px 24px;
+                            border:1px solid #ddd;
+                            background:#fff;
+                            color:#666;
+                            border-radius:6px;
+                            cursor:pointer;
+                            font-size:14px;
+                            font-weight:500;
+                        ">Cancel</button>
+                        <button id="modal-start-export" style="
+                            padding:10px 24px;
+                            border:none;
+                            background:#db0011;
+                            color:#fff;
+                            border-radius:6px;
+                            cursor:pointer;
+                            font-size:14px;
+                            font-weight:600;
+                        ">Start Export</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        let selectedDates = null;
+
+        // Preset button handlers
+        modal.querySelectorAll('.date-preset-btn').forEach(btn => {
+            btn.onmouseover = () => {
+                btn.style.borderColor = '#db0011';
+                btn.style.color = '#db0011';
+            };
+            btn.onmouseout = () => {
+                if (!btn.classList.contains('selected')) {
+                    btn.style.borderColor = '#ddd';
+                    btn.style.color = '#333';
+                }
+            };
+            btn.onclick = () => {
+                // Deselect all
+                modal.querySelectorAll('.date-preset-btn').forEach(b => {
+                    b.classList.remove('selected');
+                    b.style.borderColor = '#ddd';
+                    b.style.background = '#fff';
+                    b.style.color = '#333';
+                });
+                // Select this one
+                btn.classList.add('selected');
+                btn.style.borderColor = '#db0011';
+                btn.style.background = '#db0011';
+                btn.style.color = '#fff';
+
+                const dates = getDatePreset(btn.dataset.preset);
+                document.getElementById('modal-start').value = dates.start;
+                document.getElementById('modal-end').value = dates.end;
+                selectedDates = dates;
+            };
+        });
+
+        // Cancel button
+        document.getElementById('modal-cancel').onclick = () => {
+            modal.remove();
+            resolve(null);
+        };
+
+        // Start Export button
+        document.getElementById('modal-start-export').onclick = () => {
+            const startVal = document.getElementById('modal-start').value.trim();
+            const endVal = document.getElementById('modal-end').value.trim();
+
+            if (!startVal || !endVal) {
+                alert('Please select a date range or enter custom dates');
+                return;
+            }
+
+            modal.remove();
+            resolve({ start: startVal, end: endVal });
+        };
+
+        // Close on overlay click
+        modal.firstElementChild.onclick = (e) => {
+            if (e.target === modal.firstElementChild) {
+                modal.remove();
+                resolve(null);
+            }
+        };
+
+        // Default to yesterday
+        const yesterday = getDatePreset('yesterday');
+        document.getElementById('modal-start').value = yesterday.start;
+        document.getElementById('modal-end').value = yesterday.end;
+    });
+}
+
 // --- Helper Functions ---
 
 function sleep(ms) {
@@ -148,12 +595,15 @@ let isInjectingExportAll = false;
 // Export All State
 let exportAllState = {
     isRunning: false,
-    accounts: [],        // [{number, title, rowElement}]
+    cancelled: false,    // Cancel flag for progress bar
+    isSelectiveExport: false, // True if user selected specific accounts (don't paginate)
+    accounts: [],        // [{number, title, currency, rowElement}]
     currentIndex: 0,
     completed: [],
     failed: [],
-    startDate: '',       // yesterday dd/mm/yyyy
-    endDate: ''          // yesterday dd/mm/yyyy
+    startDate: '',       // dd/mm/yyyy
+    endDate: '',         // dd/mm/yyyy
+    startTime: null      // For duration tracking
 };
 
 // Check if on accounts list page (NOT details page)
@@ -360,6 +810,7 @@ async function handleExportFlow(e) {
 setInterval(() => {
     injectButton();          // Details page button
     injectExportAllButton(); // List page button
+    injectCheckboxes();      // List page checkboxes
 }, 2000);
 
 // ==============================================
@@ -501,33 +952,48 @@ async function handleExportAll(e) {
         return;
     }
 
-    // Calculate yesterday's date
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const dateStr = yesterday.toLocaleDateString('en-GB'); // dd/mm/yyyy
-
-    // Extract accounts from current page
-    const accounts = extractAccountsFromTable();
-
-    if (accounts.length === 0) {
-        logExportAll("No accounts found on page!");
+    // Show date selection modal
+    const dateRange = await showDateModal();
+    if (!dateRange) {
+        log("Export cancelled - no dates selected");
         return;
     }
+
+    const startDate = dateRange.start;
+    const endDate = dateRange.end;
+
+    // Get selected accounts (or all if no checkboxes)
+    const accounts = getSelectedAccounts();
+    const totalAccountsOnPage = document.querySelectorAll('.hsbc-select-checkbox').length;
+
+    if (accounts.length === 0) {
+        logExportAll("No accounts selected!");
+        return;
+    }
+
+    // Check if this is a selective export (user unchecked some accounts)
+    const isSelectiveExport = totalAccountsOnPage > 0 && accounts.length < totalAccountsOnPage;
 
     // Initialize state
     exportAllState = {
         isRunning: true,
+        cancelled: false,
+        isSelectiveExport: isSelectiveExport,
         accounts: accounts,
         currentIndex: 0,
         completed: [],
         failed: [],
-        startDate: dateStr,
-        endDate: dateStr
+        startDate: startDate,
+        endDate: endDate,
+        startTime: Date.now()
     };
 
     logExportAll(`Starting: ${accounts.length} accounts`);
-    logExportAll(`Date: ${dateStr}`);
+    logExportAll(`Date: ${startDate} to ${endDate}`);
     updateExportAllButton('working');
+
+    // Show progress bar
+    updateProgress(0, accounts.length, 'Starting...');
 
     // Start processing
     processNextAccount();
@@ -535,7 +1001,14 @@ async function handleExportAll(e) {
 
 // Task 4: Process Single Account
 async function processNextAccount() {
-    const { accounts, currentIndex, startDate, endDate } = exportAllState;
+    const { accounts, currentIndex, startDate, endDate, cancelled } = exportAllState;
+
+    // Check if cancelled
+    if (cancelled) {
+        logExportAll('Export cancelled by user');
+        finishExportAll();
+        return;
+    }
 
     // Check if done with current page
     if (currentIndex >= accounts.length) {
@@ -545,11 +1018,21 @@ async function processNextAccount() {
 
     const account = accounts[currentIndex];
     const total = accounts.length;
+
+    // Update progress bar
+    updateProgress(currentIndex + 1, total, account.title);
+
     logExportAll(`[${currentIndex + 1}/${total}] ${account.title}`);
 
     try {
-        // 1. Click account row to go to details
-        account.rowElement.click();
+        // 1. Find fresh row element (DOM may have been refreshed)
+        const rowElement = findRowByAccountNumber(account.number);
+        if (!rowElement) {
+            throw new Error('Row not found in table');
+        }
+
+        // 2. Click account row to go to details
+        rowElement.click();
 
         // 2. Wait for export button to appear (details page loaded)
         await waitForElement('#hsbc-bot-export-btn', 15000);
@@ -594,20 +1077,27 @@ async function processNextAccount() {
         await waitForElement('table.accounts-table', 10000);
         await sleep(1000); // Let table populate
 
-        // 8. Re-extract rows (DOM references may be stale)
-        exportAllState.accounts = extractAccountsFromTable();
+        // Note: We do NOT re-extract accounts here to preserve the selected list
+        // Fresh DOM references are obtained via findRowByAccountNumber()
 
     } catch (err) {
         logExportAll(`Error returning to list: ${err.message}`);
     }
 
-    // 9. Move to next account
+    // 8. Move to next account
     exportAllState.currentIndex++;
     processNextAccount();
 }
 
 // Task 6: Pagination Handler
 async function handlePageComplete() {
+    // Skip pagination for selective exports - only process what user selected
+    if (exportAllState.isSelectiveExport) {
+        logExportAll('Selective export complete');
+        finishExportAll();
+        return;
+    }
+
     // Next page button is an <a> tag when enabled, <span> when disabled
     const nextBtn = document.querySelector('a.pagination__link--arrow[aria-label="Go to next page"]');
 
@@ -639,19 +1129,40 @@ async function handlePageComplete() {
 
 // Task 7: Completion Summary
 function finishExportAll() {
-    const { completed, failed } = exportAllState;
+    const { completed, failed, cancelled, startDate, endDate, startTime, accounts, currentIndex } = exportAllState;
 
-    logExportAll('========== COMPLETE ==========');
-    logExportAll(`✓ Completed: ${completed.length}`);
-    logExportAll(`✗ Failed: ${failed.length}`);
+    // Hide progress bar
+    hideProgress();
+
+    if (cancelled) {
+        logExportAll('========== CANCELLED ==========');
+        logExportAll(`✓ Completed: ${completed.length}`);
+        logExportAll(`⊘ Remaining: ${accounts.length - currentIndex}`);
+    } else {
+        logExportAll('========== COMPLETE ==========');
+        logExportAll(`✓ Completed: ${completed.length}`);
+        logExportAll(`✗ Failed: ${failed.length}`);
+    }
 
     if (failed.length > 0) {
         console.log("[HSBC Bot] Failed accounts:", failed);
         logExportAll(`Failed: ${failed.join(', ')}`);
     }
 
+    // Save to history
+    saveExportHistory({
+        id: `export_${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        dateRange: { from: startDate, to: endDate },
+        totalAccounts: accounts.length,
+        completed: completed.length,
+        failed: failed,
+        cancelled: cancelled,
+        durationMs: Date.now() - startTime
+    });
+
     exportAllState.isRunning = false;
-    updateExportAllButton('done');
+    updateExportAllButton(cancelled ? 'idle' : 'done');
 }
 
 // --- Listen for download confirmation from background ---
