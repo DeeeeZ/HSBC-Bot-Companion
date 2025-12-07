@@ -11,28 +11,78 @@ function initLogger() {
     if (!document.body) return; // Wait for body
 
     logOverlay = document.createElement('div');
-    logOverlay.style.cssText = 'position:fixed; bottom:10px; left:10px; background:rgba(0,0,0,0.9); color:#00ff00; padding:10px; z-index:2147483647; font-family:monospace; font-size:14px; pointer-events:none; max-width: 500px; border-radius: 5px; border: 1px solid #00ff00; box-shadow: 0 0 10px rgba(0,0,0,0.5);';
-    
-    // Show current page type
-    let pageType = "Unknown";
-    if (CURRENT_URL.includes("GIBRfdRedirect")) pageType = "REDIRECT PAGE";
-    else if (CURRENT_URL.includes("/accounts/details/")) pageType = "ACCOUNTS PAGE";
+    logOverlay.style.cssText = `
+        position: fixed;
+        bottom: 16px;
+        left: 16px;
+        max-width: 380px;
+        min-width: 280px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(219, 0, 17, 0.1);
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+        font-size: 12px;
+        line-height: 1.5;
+        color: #374151;
+        padding: 14px 16px;
+        z-index: 2147483647;
+        pointer-events: none;
+        animation: slideInUp 0.3s ease-out;
+    `;
 
-    logOverlay.innerHTML = `HSBC Bot: ${pageType}<br>`;
+    // Add animation keyframes
+    if (!document.getElementById('hsbc-bot-animations')) {
+        const style = document.createElement('style');
+        style.id = 'hsbc-bot-animations';
+        style.textContent = `
+            @keyframes slideInUp {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            @keyframes slideInDown {
+                from { opacity: 0; transform: translateY(-100%); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            @keyframes shimmer {
+                0% { transform: translateX(-100%); }
+                100% { transform: translateX(100%); }
+            }
+            @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.5; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    // Show current page type
+    let pageType = "Ready";
+    if (CURRENT_URL.includes("GIBRfdRedirect")) pageType = "Redirect";
+    else if (CURRENT_URL.includes("/accounts/details/")) pageType = "Account Details";
+
+    logOverlay.innerHTML = `
+        <div style="display:flex; align-items:center; gap:8px; padding-bottom:10px; margin-bottom:10px; border-bottom:1px solid rgba(0,0,0,0.06); font-weight:600; font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px;">
+            <span style="width:8px; height:8px; background:#10b981; border-radius:50%; box-shadow:0 0 0 3px rgba(16,185,129,0.2); animation:pulse 2s infinite;"></span>
+            HSBC Bot · ${pageType}
+        </div>
+    `;
     document.body.appendChild(logOverlay);
 }
 
 function log(msg) {
     console.log("[HSBC Bot] " + msg);
-    
+
     // Try to init if missing (e.g. body wasn't ready before)
     if (!logOverlay && document.body) initLogger();
-    
+
     if (logOverlay) {
-        logOverlay.innerHTML += `> ${msg}<br>`;
-        const lines = logOverlay.innerHTML.split('<br>');
-        if (lines.length > 8) {
-            logOverlay.innerHTML = lines.slice(lines.length - 8).join('<br>');
+        logOverlay.innerHTML += `<div style="padding:3px 0; display:flex; align-items:flex-start; gap:6px;"><span style="color:#9ca3af;">›</span> ${msg}</div>`;
+        const entries = logOverlay.querySelectorAll('div:not(:first-child)');
+        if (entries.length > 6) {
+            entries[0].remove();
         }
     }
 }
@@ -47,14 +97,16 @@ if (document.body) {
 
 function logError(msg, err) {
     console.error("[HSBC Bot Error] " + msg, err);
-    logOverlay.innerHTML += `<span style="color:red">> ERROR: ${msg}</span><br>`;
+    if (logOverlay) {
+        logOverlay.innerHTML += `<div style="padding:3px 0; display:flex; align-items:flex-start; gap:6px; color:#ef4444; font-weight:500;"><span>✕</span> ${msg}</div>`;
+    }
 }
 
 function logRPA(msg) {
     console.log("[HSBC Bot RPA] " + msg);
     if (!logOverlay && document.body) initLogger();
     if (logOverlay) {
-        logOverlay.innerHTML += `<span style="color:#00bfff">> [RPA] ${msg}</span><br>`;
+        logOverlay.innerHTML += `<div style="padding:3px 0; display:flex; align-items:flex-start; gap:6px; color:#8b5cf6; font-weight:500;"><span>⚡</span> ${msg}</div>`;
     }
 }
 
@@ -75,43 +127,65 @@ function createProgressBar() {
         top: 0;
         left: 0;
         right: 0;
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-        color: #fff;
-        padding: 16px 24px;
         z-index: 2147483647;
+        background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(250,250,250,0.98) 100%);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 4px 20px rgba(0,0,0,0.08);
+        padding: 18px 28px;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         display: none;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        animation: slideInDown 0.4s ease-out;
     `;
     progressBar.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:20px;">
-            <div style="min-width:180px;">
-                <div id="progress-text" style="font-size:16px; font-weight:600;">Exporting... 0/0</div>
-                <div id="progress-current" style="color:#888; font-size:13px; margin-top:4px;">Starting...</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:24px; max-width:1200px; margin:0 auto;">
+            <div style="min-width:200px;">
+                <div id="progress-text" style="font-size:15px; font-weight:700; color:#111827; display:flex; align-items:center; gap:8px;">
+                    <span style="width:3px; height:16px; background:linear-gradient(180deg, #db0011 0%, #ff4444 100%); border-radius:2px;"></span>
+                    Exporting... 0/0
+                </div>
+                <div id="progress-current" style="color:#6b7280; font-size:13px; margin-top:4px; font-weight:500;">Starting...</div>
             </div>
-            <div style="flex:1; max-width:500px;">
-                <div style="background:rgba(255,255,255,0.1); height:24px; border-radius:12px; overflow:hidden; border:1px solid rgba(255,255,255,0.2);">
-                    <div id="progress-fill" style="background:linear-gradient(90deg, #db0011 0%, #ff4444 100%); height:100%; width:0%; transition:width 0.3s ease; border-radius:12px;"></div>
+            <div style="flex:1; max-width:500px; position:relative;">
+                <div style="background:rgba(0,0,0,0.06); height:8px; border-radius:8px; overflow:hidden;">
+                    <div id="progress-fill" style="background:linear-gradient(90deg, #db0011 0%, #ff4444 100%); height:100%; width:0%; transition:width 0.5s cubic-bezier(0.16,1,0.3,1); border-radius:8px; box-shadow:0 0 8px rgba(219,0,17,0.3); position:relative; overflow:hidden;">
+                        <div style="position:absolute; top:0; left:0; right:0; bottom:0; background:linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%); animation:shimmer 2s infinite;"></div>
+                    </div>
                 </div>
             </div>
             <button id="progress-cancel" style="
-                background: transparent;
-                color: #ff6b6b;
-                border: 1px solid #ff6b6b;
-                padding: 8px 20px;
+                background: white;
+                color: #ef4444;
+                border: 2px solid #fecaca;
+                padding: 10px 20px;
                 cursor: pointer;
-                border-radius: 6px;
+                border-radius: 8px;
                 font-weight: 600;
                 font-size: 14px;
-                transition: all 0.2s;
-            " onmouseover="this.style.background='#ff6b6b'; this.style.color='#fff';"
-               onmouseout="this.style.background='transparent'; this.style.color='#ff6b6b';">Cancel</button>
+                font-family: inherit;
+                transition: all 0.2s ease;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            ">Cancel</button>
         </div>
     `;
     document.body.appendChild(progressBar);
 
-    // Cancel button handler
-    document.getElementById('progress-cancel').onclick = () => {
+    // Cancel button handler with hover effects
+    const cancelBtn = document.getElementById('progress-cancel');
+    cancelBtn.onmouseover = () => {
+        cancelBtn.style.background = '#fee2e2';
+        cancelBtn.style.borderColor = '#ef4444';
+        cancelBtn.style.transform = 'translateY(-1px)';
+        cancelBtn.style.boxShadow = '0 4px 8px rgba(239,68,68,0.15)';
+    };
+    cancelBtn.onmouseout = () => {
+        cancelBtn.style.background = 'white';
+        cancelBtn.style.borderColor = '#fecaca';
+        cancelBtn.style.transform = 'translateY(0)';
+        cancelBtn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+    };
+    cancelBtn.onclick = () => {
         exportAllState.cancelled = true;
         logExportAll('Cancelling...');
     };
@@ -156,20 +230,56 @@ function injectCheckboxes() {
         return;
     }
 
+    // Inject checkbox styles if not already present
+    if (!document.getElementById('hsbc-checkbox-styles')) {
+        const style = document.createElement('style');
+        style.id = 'hsbc-checkbox-styles';
+        style.textContent = `
+            .hsbc-select-checkbox, .hsbc-select-all {
+                appearance: none;
+                -webkit-appearance: none;
+                width: 18px;
+                height: 18px;
+                border: 2px solid #d1d5db;
+                border-radius: 5px;
+                background: white;
+                cursor: pointer;
+                position: relative;
+                transition: all 0.15s ease;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            }
+            .hsbc-select-checkbox:hover, .hsbc-select-all:hover {
+                border-color: #db0011;
+                background: #fef2f2;
+                transform: scale(1.05);
+            }
+            .hsbc-select-checkbox:checked, .hsbc-select-all:checked {
+                background: linear-gradient(135deg, #db0011 0%, #ff4444 100%);
+                border-color: #db0011;
+                box-shadow: 0 2px 6px rgba(219,0,17,0.3);
+            }
+            .hsbc-select-checkbox:checked::after, .hsbc-select-all:checked::after {
+                content: '';
+                position: absolute;
+                left: 5px;
+                top: 1px;
+                width: 4px;
+                height: 9px;
+                border: solid white;
+                border-width: 0 2px 2px 0;
+                transform: rotate(45deg);
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
     // Add header checkbox
     const headerRow = document.querySelector('thead tr');
     if (headerRow && !headerRow.querySelector('.hsbc-select-all-th')) {
         const th = document.createElement('th');
         th.className = 'hsbc-select-all-th';
         th.style.cssText = 'width:40px; text-align:center; padding:8px;';
-        th.innerHTML = `
-            <input type="checkbox" class="hsbc-select-all" checked style="
-                width:18px;
-                height:18px;
-                cursor:pointer;
-                accent-color:#db0011;
-            ">
-        `;
+        th.innerHTML = `<input type="checkbox" class="hsbc-select-all" checked>`;
         headerRow.insertBefore(th, headerRow.firstChild);
 
         // Select All handler
@@ -188,14 +298,7 @@ function injectCheckboxes() {
 
         const td = document.createElement('td');
         td.style.cssText = 'width:40px; text-align:center; padding:8px;';
-        td.innerHTML = `
-            <input type="checkbox" class="hsbc-select-checkbox" data-index="${i}" checked style="
-                width:18px;
-                height:18px;
-                cursor:pointer;
-                accent-color:#db0011;
-            ">
-        `;
+        td.innerHTML = `<input type="checkbox" class="hsbc-select-checkbox" data-index="${i}" checked>`;
 
         // Prevent row click when clicking checkbox
         td.addEventListener('click', (e) => {
@@ -332,81 +435,102 @@ function showDateModal() {
         const modal = document.createElement('div');
         modal.id = 'hsbc-date-modal';
         modal.innerHTML = `
-            <div style="position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:2147483647; display:flex; align-items:center; justify-content:center;">
-                <div style="background:#fff; padding:28px; border-radius:12px; min-width:420px; box-shadow:0 10px 40px rgba(0,0,0,0.3); font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                    <h3 style="margin:0 0 20px; color:#333; font-size:18px; font-weight:600;">Select Date Range</h3>
+            <div style="position:fixed; inset:0; background:rgba(0,0,0,0.4); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); z-index:2147483647; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease-out;">
+                <div style="background:white; padding:32px; border-radius:16px; min-width:480px; box-shadow:0 0 0 1px rgba(0,0,0,0.05), 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; animation:modalSlideIn 0.3s ease-out;">
+                    <h3 style="margin:0 0 24px; color:#111827; font-size:20px; font-weight:700; display:flex; align-items:center; gap:10px;">
+                        <span style="width:4px; height:24px; background:linear-gradient(180deg, #db0011 0%, #ff4444 100%); border-radius:2px;"></span>
+                        Select Date Range
+                    </h3>
 
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px;">
                         <button class="date-preset-btn" data-preset="yesterday" style="
-                            padding:12px 16px;
-                            border:1px solid #ddd;
-                            background:#fff;
-                            color:#333;
-                            border-radius:8px;
+                            padding:14px 18px;
+                            border:2px solid #e5e7eb;
+                            background:white;
+                            color:#374151;
+                            border-radius:10px;
                             cursor:pointer;
                             font-size:14px;
-                            font-weight:500;
-                            transition:all 0.2s;
+                            font-weight:600;
+                            font-family:inherit;
+                            transition:all 0.2s ease;
+                            text-align:left;
+                            box-shadow:0 1px 2px rgba(0,0,0,0.05);
                         ">Yesterday</button>
                         <button class="date-preset-btn" data-preset="last7" style="
-                            padding:12px 16px;
-                            border:1px solid #ddd;
-                            background:#fff;
-                            color:#333;
-                            border-radius:8px;
+                            padding:14px 18px;
+                            border:2px solid #e5e7eb;
+                            background:white;
+                            color:#374151;
+                            border-radius:10px;
                             cursor:pointer;
                             font-size:14px;
-                            font-weight:500;
-                            transition:all 0.2s;
+                            font-weight:600;
+                            font-family:inherit;
+                            transition:all 0.2s ease;
+                            text-align:left;
+                            box-shadow:0 1px 2px rgba(0,0,0,0.05);
                         ">Last 7 Days</button>
                         <button class="date-preset-btn" data-preset="lastMonth" style="
-                            padding:12px 16px;
-                            border:1px solid #ddd;
-                            background:#fff;
-                            color:#333;
-                            border-radius:8px;
+                            padding:14px 18px;
+                            border:2px solid #e5e7eb;
+                            background:white;
+                            color:#374151;
+                            border-radius:10px;
                             cursor:pointer;
                             font-size:14px;
-                            font-weight:500;
-                            transition:all 0.2s;
+                            font-weight:600;
+                            font-family:inherit;
+                            transition:all 0.2s ease;
+                            text-align:left;
+                            box-shadow:0 1px 2px rgba(0,0,0,0.05);
                         ">Last Month</button>
                         <button class="date-preset-btn" data-preset="mtd" style="
-                            padding:12px 16px;
-                            border:1px solid #ddd;
-                            background:#fff;
-                            color:#333;
-                            border-radius:8px;
+                            padding:14px 18px;
+                            border:2px solid #e5e7eb;
+                            background:white;
+                            color:#374151;
+                            border-radius:10px;
                             cursor:pointer;
                             font-size:14px;
-                            font-weight:500;
-                            transition:all 0.2s;
+                            font-weight:600;
+                            font-family:inherit;
+                            transition:all 0.2s ease;
+                            text-align:left;
+                            box-shadow:0 1px 2px rgba(0,0,0,0.05);
                         ">Month to Date</button>
                     </div>
 
-                    <div style="border-top:1px solid #eee; padding-top:16px; margin-bottom:20px;">
-                        <label style="display:block; color:#666; font-size:13px; margin-bottom:10px; font-weight:500;">Custom Range:</label>
-                        <div style="display:flex; gap:12px; align-items:center;">
+                    <div style="border-top:2px solid #f3f4f6; padding-top:20px; margin-bottom:24px;">
+                        <label style="display:block; color:#6b7280; font-size:13px; margin-bottom:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Custom Range</label>
+                        <div style="display:flex; gap:16px; align-items:center;">
                             <div style="flex:1;">
-                                <label style="font-size:12px; color:#888; display:block; margin-bottom:4px;">From</label>
+                                <label style="font-size:12px; color:#9ca3af; display:block; margin-bottom:6px; font-weight:500;">From</label>
                                 <input type="text" id="modal-start" placeholder="dd/mm/yyyy" style="
                                     width:100%;
-                                    padding:10px 12px;
-                                    border:1px solid #ddd;
-                                    border-radius:6px;
+                                    padding:12px 14px;
+                                    border:2px solid #e5e7eb;
+                                    border-radius:8px;
                                     font-size:14px;
+                                    font-family:inherit;
+                                    color:#111827;
                                     box-sizing:border-box;
+                                    transition:all 0.2s ease;
                                 ">
                             </div>
-                            <span style="color:#888; margin-top:18px;">→</span>
+                            <span style="color:#d1d5db; font-size:18px; margin-top:20px;">→</span>
                             <div style="flex:1;">
-                                <label style="font-size:12px; color:#888; display:block; margin-bottom:4px;">To</label>
+                                <label style="font-size:12px; color:#9ca3af; display:block; margin-bottom:6px; font-weight:500;">To</label>
                                 <input type="text" id="modal-end" placeholder="dd/mm/yyyy" style="
                                     width:100%;
-                                    padding:10px 12px;
-                                    border:1px solid #ddd;
-                                    border-radius:6px;
+                                    padding:12px 14px;
+                                    border:2px solid #e5e7eb;
+                                    border-radius:8px;
                                     font-size:14px;
+                                    font-family:inherit;
+                                    color:#111827;
                                     box-sizing:border-box;
+                                    transition:all 0.2s ease;
                                 ">
                             </div>
                         </div>
@@ -414,29 +538,54 @@ function showDateModal() {
 
                     <div style="display:flex; justify-content:flex-end; gap:12px;">
                         <button id="modal-cancel" style="
-                            padding:10px 24px;
-                            border:1px solid #ddd;
-                            background:#fff;
-                            color:#666;
-                            border-radius:6px;
-                            cursor:pointer;
-                            font-size:14px;
-                            font-weight:500;
-                        ">Cancel</button>
-                        <button id="modal-start-export" style="
-                            padding:10px 24px;
-                            border:none;
-                            background:#db0011;
-                            color:#fff;
-                            border-radius:6px;
+                            padding:12px 28px;
+                            border:2px solid #e5e7eb;
+                            background:white;
+                            color:#6b7280;
+                            border-radius:8px;
                             cursor:pointer;
                             font-size:14px;
                             font-weight:600;
+                            font-family:inherit;
+                            transition:all 0.2s ease;
+                        ">Cancel</button>
+                        <button id="modal-start-export" style="
+                            padding:12px 28px;
+                            border:none;
+                            background:linear-gradient(135deg, #db0011 0%, #a50000 100%);
+                            color:white;
+                            border-radius:8px;
+                            cursor:pointer;
+                            font-size:14px;
+                            font-weight:600;
+                            font-family:inherit;
+                            box-shadow:0 2px 8px rgba(219,0,17,0.25);
+                            transition:all 0.2s ease;
                         ">Start Export</button>
                     </div>
                 </div>
             </div>
         `;
+
+        // Inject modal animation styles
+        if (!document.getElementById('hsbc-modal-styles')) {
+            const style = document.createElement('style');
+            style.id = 'hsbc-modal-styles';
+            style.textContent = `
+                @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+                @keyframes modalSlideIn {
+                    from { opacity: 0; transform: scale(0.95) translateY(-20px); }
+                    to { opacity: 1; transform: scale(1) translateY(0); }
+                }
+                #modal-start:focus, #modal-end:focus {
+                    outline: none;
+                    border-color: #db0011;
+                    box-shadow: 0 0 0 3px rgba(219, 0, 17, 0.1);
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
         document.body.appendChild(modal);
 
         let selectedDates = null;
@@ -444,22 +593,31 @@ function showDateModal() {
         // Preset button handlers
         modal.querySelectorAll('.date-preset-btn').forEach(btn => {
             btn.onmouseover = () => {
-                btn.style.borderColor = '#db0011';
-                btn.style.color = '#db0011';
+                if (!btn.classList.contains('selected')) {
+                    btn.style.borderColor = '#fecaca';
+                    btn.style.background = '#fef2f2';
+                    btn.style.color = '#db0011';
+                    btn.style.transform = 'translateY(-2px)';
+                    btn.style.boxShadow = '0 4px 8px rgba(0,0,0,0.08)';
+                }
             };
             btn.onmouseout = () => {
                 if (!btn.classList.contains('selected')) {
-                    btn.style.borderColor = '#ddd';
-                    btn.style.color = '#333';
+                    btn.style.borderColor = '#e5e7eb';
+                    btn.style.background = 'white';
+                    btn.style.color = '#374151';
+                    btn.style.transform = 'translateY(0)';
+                    btn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
                 }
             };
             btn.onclick = () => {
                 // Deselect all
                 modal.querySelectorAll('.date-preset-btn').forEach(b => {
                     b.classList.remove('selected');
-                    b.style.borderColor = '#ddd';
-                    b.style.background = '#fff';
-                    b.style.color = '#333';
+                    b.style.borderColor = '#e5e7eb';
+                    b.style.background = 'white';
+                    b.style.color = '#374151';
+                    b.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
                 });
                 // Select this one
                 btn.classList.add('selected');
@@ -474,14 +632,38 @@ function showDateModal() {
             };
         });
 
-        // Cancel button
-        document.getElementById('modal-cancel').onclick = () => {
+        // Cancel button with hover effects
+        const cancelBtn = document.getElementById('modal-cancel');
+        cancelBtn.onmouseover = () => {
+            cancelBtn.style.borderColor = '#d1d5db';
+            cancelBtn.style.background = '#f9fafb';
+            cancelBtn.style.color = '#374151';
+            cancelBtn.style.transform = 'translateY(-1px)';
+        };
+        cancelBtn.onmouseout = () => {
+            cancelBtn.style.borderColor = '#e5e7eb';
+            cancelBtn.style.background = 'white';
+            cancelBtn.style.color = '#6b7280';
+            cancelBtn.style.transform = 'translateY(0)';
+        };
+        cancelBtn.onclick = () => {
             modal.remove();
             resolve(null);
         };
 
-        // Start Export button
-        document.getElementById('modal-start-export').onclick = () => {
+        // Start Export button with hover effects
+        const startExportBtn = document.getElementById('modal-start-export');
+        startExportBtn.onmouseover = () => {
+            startExportBtn.style.background = 'linear-gradient(135deg, #ff1a2f 0%, #db0011 100%)';
+            startExportBtn.style.transform = 'translateY(-1px)';
+            startExportBtn.style.boxShadow = '0 4px 12px rgba(219,0,17,0.35)';
+        };
+        startExportBtn.onmouseout = () => {
+            startExportBtn.style.background = 'linear-gradient(135deg, #db0011 0%, #a50000 100%)';
+            startExportBtn.style.transform = 'translateY(0)';
+            startExportBtn.style.boxShadow = '0 2px 8px rgba(219,0,17,0.25)';
+        };
+        startExportBtn.onclick = () => {
             const startVal = document.getElementById('modal-start').value.trim();
             const endVal = document.getElementById('modal-end').value.trim();
 
@@ -629,8 +811,30 @@ async function injectExportAllButton() {
         const button = document.createElement('button');
         button.id = 'hsbc-bot-export-all-btn';
         button.textContent = 'Export All';
-        button.style.cssText = 'background-color: #db0011; color: #fff; border: none; padding: 8px 16px; cursor: pointer; font-weight: bold; border-radius: 4px;';
+        button.style.cssText = `
+            background: linear-gradient(135deg, #db0011 0%, #a50000 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: 700;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            box-shadow: 0 2px 8px rgba(219, 0, 17, 0.25);
+            transition: all 0.2s ease;
+        `;
 
+        button.onmouseover = () => {
+            button.style.background = 'linear-gradient(135deg, #ff1a2f 0%, #db0011 100%)';
+            button.style.transform = 'translateY(-1px)';
+            button.style.boxShadow = '0 4px 12px rgba(219, 0, 17, 0.35)';
+        };
+        button.onmouseout = () => {
+            button.style.background = 'linear-gradient(135deg, #db0011 0%, #a50000 100%)';
+            button.style.transform = 'translateY(0)';
+            button.style.boxShadow = '0 2px 8px rgba(219, 0, 17, 0.25)';
+        };
         button.onclick = handleExportAll;
 
         li.appendChild(button);
@@ -653,14 +857,38 @@ async function injectButton() {
     if (headerActions) {
         const li = document.createElement('li');
         li.className = 'header-actions__item';
-        
+
         const button = document.createElement('button');
         button.id = 'hsbc-bot-export-btn';
         button.className = 'user-action__button';
-        button.textContent = 'Auto Export'; 
-        // Integrated Style (Ghost Button)
-        button.style.cssText = 'background-color: #fff; color: #db0011; border: 1px solid #ccc; cursor: pointer; margin-left: 10px;';
+        button.textContent = 'Auto Export';
+        button.style.cssText = `
+            background: white;
+            color: #db0011;
+            border: 2px solid #fecaca;
+            cursor: pointer;
+            margin-left: 12px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        `;
 
+        button.onmouseover = () => {
+            button.style.background = '#fef2f2';
+            button.style.borderColor = '#db0011';
+            button.style.transform = 'translateY(-1px)';
+            button.style.boxShadow = '0 2px 6px rgba(219,0,17,0.15)';
+        };
+        button.onmouseout = () => {
+            button.style.background = 'white';
+            button.style.borderColor = '#fecaca';
+            button.style.transform = 'translateY(0)';
+            button.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+        };
         button.onclick = handleExportFlow;
 
         li.appendChild(button);
