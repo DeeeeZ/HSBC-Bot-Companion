@@ -5,43 +5,20 @@ console.log(`HSBC Bot Companion: Loaded on ${CURRENT_URL}`);
 
 // --- Visual Logger ---
 let logOverlay;
+let logContent;
+let loggerMinimized = true;
+let loggerTimeout = null;
+const LOGGER_AUTO_HIDE_MS = 4000; // Auto-minimize after 4 seconds of inactivity
 
 function initLogger() {
     if (logOverlay) return;
-    if (!document.body) return; // Wait for body
-
-    logOverlay = document.createElement('div');
-    logOverlay.style.cssText = `
-        position: fixed;
-        bottom: 16px;
-        left: 16px;
-        max-width: 380px;
-        min-width: 280px;
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border: 1px solid rgba(219, 0, 17, 0.1);
-        border-radius: 12px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-        font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
-        font-size: 12px;
-        line-height: 1.5;
-        color: #374151;
-        padding: 14px 16px;
-        z-index: 2147483647;
-        pointer-events: none;
-        animation: slideInUp 0.3s ease-out;
-    `;
+    if (!document.body) return;
 
     // Add animation keyframes
     if (!document.getElementById('hsbc-bot-animations')) {
         const style = document.createElement('style');
         style.id = 'hsbc-bot-animations';
         style.textContent = `
-            @keyframes slideInUp {
-                from { opacity: 0; transform: translateY(20px); }
-                to { opacity: 1; transform: translateY(0); }
-            }
             @keyframes slideInDown {
                 from { opacity: 0; transform: translateY(-100%); }
                 to { opacity: 1; transform: translateY(0); }
@@ -52,39 +29,93 @@ function initLogger() {
             }
             @keyframes pulse {
                 0%, 100% { opacity: 1; }
-                50% { opacity: 0.5; }
+                50% { opacity: 0.6; }
             }
         `;
         document.head.appendChild(style);
     }
 
-    // Show current page type
-    let pageType = "Ready";
-    if (CURRENT_URL.includes("GIBRfdRedirect")) pageType = "Redirect";
-    else if (CURRENT_URL.includes("/accounts/details/")) pageType = "Account Details";
+    logOverlay = document.createElement('div');
+    logOverlay.id = 'hsbc-bot-logger';
+    logOverlay.style.cssText = `
+        position: fixed;
+        bottom: 12px;
+        left: 12px;
+        z-index: 2147483647;
+        pointer-events: none;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        font-size: 11px;
+        transition: all 0.25s ease;
+    `;
 
+    // Minimized state - just a small indicator dot
     logOverlay.innerHTML = `
-        <div style="display:flex; align-items:center; gap:8px; padding-bottom:10px; margin-bottom:10px; border-bottom:1px solid rgba(0,0,0,0.06); font-weight:600; font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px;">
-            <span style="width:8px; height:8px; background:#10b981; border-radius:50%; box-shadow:0 0 0 3px rgba(16,185,129,0.2); animation:pulse 2s infinite;"></span>
-            HSBC Bot · ${pageType}
+        <div id="hsbc-logger-minimized" style="
+            width: 10px;
+            height: 10px;
+            background: rgba(16, 185, 129, 0.8);
+            border-radius: 50%;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+            animation: pulse 3s infinite;
+            transition: all 0.2s ease;
+        "></div>
+        <div id="hsbc-logger-expanded" style="
+            display: none;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-radius: 6px;
+            padding: 8px 12px;
+            max-width: 320px;
+            color: rgba(255,255,255,0.9);
+            line-height: 1.4;
+        ">
+            <div id="hsbc-logger-content"></div>
         </div>
     `;
+
     document.body.appendChild(logOverlay);
+    logContent = document.getElementById('hsbc-logger-content');
+}
+
+function expandLogger() {
+    if (!logOverlay) return;
+    const minimized = document.getElementById('hsbc-logger-minimized');
+    const expanded = document.getElementById('hsbc-logger-expanded');
+    if (minimized) minimized.style.display = 'none';
+    if (expanded) expanded.style.display = 'block';
+    loggerMinimized = false;
+}
+
+function minimizeLogger() {
+    if (!logOverlay) return;
+    const minimized = document.getElementById('hsbc-logger-minimized');
+    const expanded = document.getElementById('hsbc-logger-expanded');
+    if (minimized) minimized.style.display = 'block';
+    if (expanded) expanded.style.display = 'none';
+    loggerMinimized = true;
+    // Clear content when minimized
+    if (logContent) logContent.innerHTML = '';
+}
+
+function resetLoggerTimeout() {
+    if (loggerTimeout) clearTimeout(loggerTimeout);
+    loggerTimeout = setTimeout(minimizeLogger, LOGGER_AUTO_HIDE_MS);
 }
 
 function log(msg) {
     console.log("[HSBC Bot] " + msg);
-
-    // Try to init if missing (e.g. body wasn't ready before)
     if (!logOverlay && document.body) initLogger();
+    if (!logContent) return;
 
-    if (logOverlay) {
-        logOverlay.innerHTML += `<div style="padding:3px 0; display:flex; align-items:flex-start; gap:6px;"><span style="color:#9ca3af;">›</span> ${msg}</div>`;
-        const entries = logOverlay.querySelectorAll('div:not(:first-child)');
-        if (entries.length > 6) {
-            entries[0].remove();
-        }
-    }
+    expandLogger();
+    logContent.innerHTML += `<div style="padding:2px 0; opacity:0.85;">› ${msg}</div>`;
+
+    // Keep last 5 lines
+    const entries = logContent.querySelectorAll('div');
+    if (entries.length > 5) entries[0].remove();
+
+    resetLoggerTimeout();
 }
 
 // Init when safe
@@ -97,17 +128,22 @@ if (document.body) {
 
 function logError(msg, err) {
     console.error("[HSBC Bot Error] " + msg, err);
-    if (logOverlay) {
-        logOverlay.innerHTML += `<div style="padding:3px 0; display:flex; align-items:flex-start; gap:6px; color:#ef4444; font-weight:500;"><span>✕</span> ${msg}</div>`;
-    }
+    if (!logOverlay && document.body) initLogger();
+    if (!logContent) return;
+
+    expandLogger();
+    logContent.innerHTML += `<div style="padding:2px 0; color:#ff6b6b;">✕ ${msg}</div>`;
+    resetLoggerTimeout();
 }
 
 function logRPA(msg) {
     console.log("[HSBC Bot RPA] " + msg);
     if (!logOverlay && document.body) initLogger();
-    if (logOverlay) {
-        logOverlay.innerHTML += `<div style="padding:3px 0; display:flex; align-items:flex-start; gap:6px; color:#8b5cf6; font-weight:500;"><span>⚡</span> ${msg}</div>`;
-    }
+    if (!logContent) return;
+
+    expandLogger();
+    logContent.innerHTML += `<div style="padding:2px 0; color:#a78bfa;">⚡ ${msg}</div>`;
+    resetLoggerTimeout();
 }
 
 // --- Configuration ---
@@ -812,28 +848,25 @@ async function injectExportAllButton() {
         button.id = 'hsbc-bot-export-all-btn';
         button.textContent = 'Export All';
         button.style.cssText = `
-            background: linear-gradient(135deg, #db0011 0%, #a50000 100%);
-            color: white;
-            border: none;
-            padding: 10px 20px;
+            background: transparent;
+            color: #333;
+            border: 1px solid #ccc;
+            padding: 8px 16px;
             cursor: pointer;
-            font-weight: 700;
-            border-radius: 8px;
-            font-size: 14px;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            box-shadow: 0 2px 8px rgba(219, 0, 17, 0.25);
-            transition: all 0.2s ease;
+            font-weight: 500;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: inherit;
+            transition: all 0.15s ease;
         `;
 
         button.onmouseover = () => {
-            button.style.background = 'linear-gradient(135deg, #ff1a2f 0%, #db0011 100%)';
-            button.style.transform = 'translateY(-1px)';
-            button.style.boxShadow = '0 4px 12px rgba(219, 0, 17, 0.35)';
+            button.style.background = '#f5f5f5';
+            button.style.borderColor = '#999';
         };
         button.onmouseout = () => {
-            button.style.background = 'linear-gradient(135deg, #db0011 0%, #a50000 100%)';
-            button.style.transform = 'translateY(0)';
-            button.style.boxShadow = '0 2px 8px rgba(219, 0, 17, 0.25)';
+            button.style.background = 'transparent';
+            button.style.borderColor = '#ccc';
         };
         button.onclick = handleExportAll;
 
@@ -863,31 +896,26 @@ async function injectButton() {
         button.className = 'user-action__button';
         button.textContent = 'Auto Export';
         button.style.cssText = `
-            background: white;
-            color: #db0011;
-            border: 2px solid #fecaca;
+            background: transparent;
+            color: #333;
+            border: 1px solid #ccc;
             cursor: pointer;
             margin-left: 12px;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 700;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            transition: all 0.2s ease;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
+            font-family: inherit;
+            transition: all 0.15s ease;
         `;
 
         button.onmouseover = () => {
-            button.style.background = '#fef2f2';
-            button.style.borderColor = '#db0011';
-            button.style.transform = 'translateY(-1px)';
-            button.style.boxShadow = '0 2px 6px rgba(219,0,17,0.15)';
+            button.style.background = '#f5f5f5';
+            button.style.borderColor = '#999';
         };
         button.onmouseout = () => {
-            button.style.background = 'white';
-            button.style.borderColor = '#fecaca';
-            button.style.transform = 'translateY(0)';
-            button.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+            button.style.background = 'transparent';
+            button.style.borderColor = '#ccc';
         };
         button.onclick = handleExportFlow;
 
@@ -1158,14 +1186,16 @@ function updateExportAllButton(state) {
 function logExportAll(msg) {
     console.log("[HSBC Bot Export All] " + msg);
     if (!logOverlay && document.body) initLogger();
-    if (logOverlay) {
-        logOverlay.innerHTML += `<span style="color:#ff9800">> [Export All] ${msg}</span><br>`;
-        // Keep last 10 lines
-        const lines = logOverlay.innerHTML.split('<br>');
-        if (lines.length > 10) {
-            logOverlay.innerHTML = lines.slice(lines.length - 10).join('<br>');
-        }
-    }
+    if (!logContent) return;
+
+    expandLogger();
+    logContent.innerHTML += `<div style="padding:2px 0; color:#fbbf24;">› ${msg}</div>`;
+
+    // Keep last 5 lines
+    const entries = logContent.querySelectorAll('div');
+    if (entries.length > 5) entries[0].remove();
+
+    resetLoggerTimeout();
 }
 
 // Task 3: Main Export All Handler
