@@ -51,13 +51,12 @@ function initLogger() {
         bottom: 12px;
         left: 12px;
         z-index: 2147483647;
-        pointer-events: none;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         font-size: 11px;
     `;
 
     logOverlay.innerHTML = `
-        <div style="
+        <div id="hsbc-logger-panel" style="
             background: rgba(30, 30, 30, 0.9);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
@@ -90,16 +89,77 @@ function initLogger() {
                     border-radius: 50%;
                     box-shadow: 0 0 6px ${statusColor};
                 "></span>
-                HSBC Bot · ${pageType}
+                <span style="flex:1;">HSBC Bot · ${pageType}</span>
+                <button id="hsbc-logger-minimize" style="
+                    background: none;
+                    border: none;
+                    color: rgba(255,255,255,0.5);
+                    cursor: pointer;
+                    padding: 2px 6px;
+                    font-size: 14px;
+                    line-height: 1;
+                    border-radius: 4px;
+                    transition: all 0.15s;
+                " title="Minimize">−</button>
             </div>
             <div id="hsbc-logger-content" style="font-size: 11px; line-height: 1.5;">
                 <div style="color: rgba(255,255,255,0.5);">Watching for actions...</div>
             </div>
         </div>
+        <div id="hsbc-logger-minimized" style="
+            display: none;
+            background: rgba(30, 30, 30, 0.9);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: rgba(255,255,255,0.9);
+            box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        ">
+            <span style="
+                display: inline-block;
+                width: 8px;
+                height: 8px;
+                background: ${statusColor};
+                border-radius: 50%;
+                box-shadow: 0 0 6px ${statusColor};
+                margin-right: 8px;
+            "></span>
+            HSBC Bot
+        </div>
     `;
 
     document.body.appendChild(logOverlay);
     logContent = document.getElementById('hsbc-logger-content');
+
+    // Minimize button handler
+    const minimizeBtn = document.getElementById('hsbc-logger-minimize');
+    const panel = document.getElementById('hsbc-logger-panel');
+    const minimizedBar = document.getElementById('hsbc-logger-minimized');
+
+    minimizeBtn.onmouseover = () => {
+        minimizeBtn.style.background = 'rgba(255,255,255,0.1)';
+        minimizeBtn.style.color = 'rgba(255,255,255,0.9)';
+    };
+    minimizeBtn.onmouseout = () => {
+        minimizeBtn.style.background = 'none';
+        minimizeBtn.style.color = 'rgba(255,255,255,0.5)';
+    };
+    minimizeBtn.onclick = () => {
+        panel.style.display = 'none';
+        minimizedBar.style.display = 'block';
+    };
+
+    // Click minimized bar to expand
+    minimizedBar.onclick = () => {
+        minimizedBar.style.display = 'none';
+        panel.style.display = 'block';
+    };
 }
 
 function log(msg) {
