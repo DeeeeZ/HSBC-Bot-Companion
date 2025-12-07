@@ -10,7 +10,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Manual close request
     if (message.action === "close_tab" && sender.tab && sender.tab.id) {
         console.log(`Received Manual Close Request for Tab ID: ${sender.tab.id}`);
-        chrome.tabs.remove(sender.tab.id);
+        chrome.tabs.remove(sender.tab.id).catch(() => {});
     }
 
     // Set download context for filename (from content.js before export)
@@ -87,11 +87,11 @@ chrome.downloads.onCreated.addListener((downloadItem) => {
             const activeTab = tabs[0];
             if (activeTab.url && activeTab.url.includes("GIBRfdRedirect")) {
                 console.log(`Closing tab ${activeTab.id} due to download start and matching URL.`);
-                
+
                 // Allow a tiny buffer (500ms) to ensure browser registers the download handoff
                 setTimeout(() => {
-                    chrome.tabs.remove(activeTab.id);
-                }, 500); 
+                    chrome.tabs.remove(activeTab.id).catch(() => {});
+                }, 500);
             }
         }
     });
@@ -102,7 +102,7 @@ chrome.downloads.onCreated.addListener((downloadItem) => {
             console.log("Found Redirect Tab:", tab.url);
             // Close it
             setTimeout(() => {
-                 chrome.tabs.remove(tab.id);
+                chrome.tabs.remove(tab.id).catch(() => {});
             }, 500);
         });
     });
