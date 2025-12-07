@@ -935,8 +935,8 @@ async function handleExportFlow(e) {
     e.stopPropagation();
     
     // Reset Log
-    logOverlay.innerHTML = "HSBC Bot: Working...<br>";
-    log("=== STARTING ===");
+    if (logContent) logContent.innerHTML = '';
+    log("=== AUTO EXPORT STARTING ===");
 
     try {
         const today = new Date();
