@@ -1,0 +1,21 @@
+# Development files
+.claude/
+EXPORT_ALL_PLAN.md
+Docs/
+
+# Saved HTML pages (reference only)
+*.html
+*_files/
+
+# Reference data
+Accounts Table.txt
+
+# Screenshots
+*.jpeg
+*.jpg
+*.png
+!ICON.png
+
+# OS files
+.DS_Store
+Thumbs.db

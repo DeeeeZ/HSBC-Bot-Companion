@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "HSBC Bot Companion",
+  "version": "2.0",
+  "description": "Automates tasks on HSBC Net: Window title verification and Excel export helper.",
+  "icons": {
+    "16": "ICON.png",
+    "48": "ICON.png",
+    "128": "ICON.png"
+  },
+  "permissions": [
+    "activeTab",
+    "downloads"
+  ],
+  "host_permissions": [
+    "*://*.hsbcnet.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.hsbcnet.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_start",
+      "match_about_blank": true
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}
