@@ -58,15 +58,17 @@ function initLogger() {
 
     logOverlay.innerHTML = `
         <div style="
-            background: rgba(30, 30, 30, 0.85);
+            background: rgba(30, 30, 30, 0.9);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             border-radius: 8px;
             padding: 10px 14px;
-            min-width: 180px;
-            max-width: 340px;
+            min-width: 280px;
+            max-width: 400px;
+            max-height: 450px;
+            overflow-y: auto;
             color: rgba(255,255,255,0.9);
-            box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 12px rgba(0,0,0,0.25);
         ">
             <div id="hsbc-logger-header" style="
                 display: flex;
@@ -114,7 +116,7 @@ function log(msg) {
 
     // Keep last 6 lines
     const entries = logContent.querySelectorAll('div');
-    if (entries.length > 6) entries[0].remove();
+    if (entries.length > 20) entries[0].remove();
 }
 
 // Init when safe
@@ -1199,7 +1201,7 @@ function logExportAll(msg) {
 
     // Keep last 6 lines
     const entries = logContent.querySelectorAll('div');
-    if (entries.length > 6) entries[0].remove();
+    if (entries.length > 20) entries[0].remove();
 }
 
 // Task 3: Main Export All Handler
