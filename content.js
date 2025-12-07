@@ -6,9 +6,8 @@ console.log(`HSBC Bot Companion: Loaded on ${CURRENT_URL}`);
 // --- Visual Logger ---
 let logOverlay;
 let logContent;
-let loggerMinimized = true;
 let loggerTimeout = null;
-const LOGGER_AUTO_HIDE_MS = 4000; // Auto-minimize after 4 seconds of inactivity
+const LOGGER_COLLAPSE_MS = 5000; // Collapse to compact mode after 5 seconds
 
 function initLogger() {
     if (logOverlay) return;
@@ -27,12 +26,22 @@ function initLogger() {
                 0% { transform: translateX(-100%); }
                 100% { transform: translateX(100%); }
             }
-            @keyframes pulse {
-                0%, 100% { opacity: 1; }
-                50% { opacity: 0.6; }
-            }
         `;
         document.head.appendChild(style);
+    }
+
+    // Detect page type
+    let pageType = "Ready";
+    let statusColor = "#10b981"; // green
+    if (CURRENT_URL.includes("GIBRfdRedirect")) {
+        pageType = "Redirect";
+        statusColor = "#f59e0b"; // amber
+    } else if (CURRENT_URL.includes("/accounts/details/")) {
+        pageType = "Account Details";
+        statusColor = "#3b82f6"; // blue
+    } else if (CURRENT_URL.includes("/accounts") || CURRENT_URL.includes("/landing")) {
+        pageType = "Accounts List";
+        statusColor = "#10b981"; // green
     }
 
     logOverlay = document.createElement('div');
@@ -45,32 +54,45 @@ function initLogger() {
         pointer-events: none;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         font-size: 11px;
-        transition: all 0.25s ease;
     `;
 
-    // Minimized state - just a small indicator dot
     logOverlay.innerHTML = `
-        <div id="hsbc-logger-minimized" style="
-            width: 10px;
-            height: 10px;
-            background: rgba(16, 185, 129, 0.8);
-            border-radius: 50%;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.15);
-            animation: pulse 3s infinite;
-            transition: all 0.2s ease;
-        "></div>
-        <div id="hsbc-logger-expanded" style="
-            display: none;
-            background: rgba(0, 0, 0, 0.75);
+        <div style="
+            background: rgba(30, 30, 30, 0.85);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
-            border-radius: 6px;
-            padding: 8px 12px;
-            max-width: 320px;
+            border-radius: 8px;
+            padding: 10px 14px;
+            min-width: 180px;
+            max-width: 340px;
             color: rgba(255,255,255,0.9);
-            line-height: 1.4;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.2);
         ">
-            <div id="hsbc-logger-content"></div>
+            <div id="hsbc-logger-header" style="
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding-bottom: 8px;
+                margin-bottom: 8px;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+                font-weight: 600;
+                font-size: 10px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                color: rgba(255,255,255,0.6);
+            ">
+                <span style="
+                    width: 8px;
+                    height: 8px;
+                    background: ${statusColor};
+                    border-radius: 50%;
+                    box-shadow: 0 0 6px ${statusColor};
+                "></span>
+                HSBC Bot · ${pageType}
+            </div>
+            <div id="hsbc-logger-content" style="font-size: 11px; line-height: 1.5;">
+                <div style="color: rgba(255,255,255,0.5);">Watching for actions...</div>
+            </div>
         </div>
     `;
 
@@ -78,44 +100,21 @@ function initLogger() {
     logContent = document.getElementById('hsbc-logger-content');
 }
 
-function expandLogger() {
-    if (!logOverlay) return;
-    const minimized = document.getElementById('hsbc-logger-minimized');
-    const expanded = document.getElementById('hsbc-logger-expanded');
-    if (minimized) minimized.style.display = 'none';
-    if (expanded) expanded.style.display = 'block';
-    loggerMinimized = false;
-}
-
-function minimizeLogger() {
-    if (!logOverlay) return;
-    const minimized = document.getElementById('hsbc-logger-minimized');
-    const expanded = document.getElementById('hsbc-logger-expanded');
-    if (minimized) minimized.style.display = 'block';
-    if (expanded) expanded.style.display = 'none';
-    loggerMinimized = true;
-    // Clear content when minimized
-    if (logContent) logContent.innerHTML = '';
-}
-
-function resetLoggerTimeout() {
-    if (loggerTimeout) clearTimeout(loggerTimeout);
-    loggerTimeout = setTimeout(minimizeLogger, LOGGER_AUTO_HIDE_MS);
-}
-
 function log(msg) {
     console.log("[HSBC Bot] " + msg);
     if (!logOverlay && document.body) initLogger();
     if (!logContent) return;
 
-    expandLogger();
-    logContent.innerHTML += `<div style="padding:2px 0; opacity:0.85;">› ${msg}</div>`;
+    // Clear "Watching" placeholder on first real log
+    if (logContent.innerHTML.includes('Watching for actions')) {
+        logContent.innerHTML = '';
+    }
 
-    // Keep last 5 lines
+    logContent.innerHTML += `<div style="padding:2px 0; color:rgba(255,255,255,0.85);">› ${msg}</div>`;
+
+    // Keep last 6 lines
     const entries = logContent.querySelectorAll('div');
-    if (entries.length > 5) entries[0].remove();
-
-    resetLoggerTimeout();
+    if (entries.length > 6) entries[0].remove();
 }
 
 // Init when safe
@@ -131,9 +130,11 @@ function logError(msg, err) {
     if (!logOverlay && document.body) initLogger();
     if (!logContent) return;
 
-    expandLogger();
+    if (logContent.innerHTML.includes('Watching for actions')) {
+        logContent.innerHTML = '';
+    }
+
     logContent.innerHTML += `<div style="padding:2px 0; color:#ff6b6b;">✕ ${msg}</div>`;
-    resetLoggerTimeout();
 }
 
 function logRPA(msg) {
@@ -141,9 +142,11 @@ function logRPA(msg) {
     if (!logOverlay && document.body) initLogger();
     if (!logContent) return;
 
-    expandLogger();
+    if (logContent.innerHTML.includes('Watching for actions')) {
+        logContent.innerHTML = '';
+    }
+
     logContent.innerHTML += `<div style="padding:2px 0; color:#a78bfa;">⚡ ${msg}</div>`;
-    resetLoggerTimeout();
 }
 
 // --- Configuration ---
@@ -1188,14 +1191,15 @@ function logExportAll(msg) {
     if (!logOverlay && document.body) initLogger();
     if (!logContent) return;
 
-    expandLogger();
+    if (logContent.innerHTML.includes('Watching for actions')) {
+        logContent.innerHTML = '';
+    }
+
     logContent.innerHTML += `<div style="padding:2px 0; color:#fbbf24;">› ${msg}</div>`;
 
-    // Keep last 5 lines
+    // Keep last 6 lines
     const entries = logContent.querySelectorAll('div');
-    if (entries.length > 5) entries[0].remove();
-
-    resetLoggerTimeout();
+    if (entries.length > 6) entries[0].remove();
 }
 
 // Task 3: Main Export All Handler
