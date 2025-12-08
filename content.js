@@ -1138,45 +1138,83 @@ setInterval(() => {
 // --- Feature 3: Export All Functions ---
 // ==============================================
 
-// Task 5: Helper - Wait for element to appear
+// Task 5: Helper - Wait for element to appear (with proper cleanup)
 function waitForElement(selector, timeout = 10000) {
     return new Promise((resolve, reject) => {
         const el = document.querySelector(selector);
         if (el) return resolve(el);
 
-        const observer = new MutationObserver(() => {
+        let observer = null;
+        let timeoutId = null;
+        let resolved = false;
+
+        const cleanup = () => {
+            if (observer) {
+                observer.disconnect();
+                observer = null;
+            }
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+            }
+        };
+
+        observer = new MutationObserver(() => {
+            if (resolved) return;
             const el = document.querySelector(selector);
             if (el) {
-                observer.disconnect();
+                resolved = true;
+                cleanup();
                 resolve(el);
             }
         });
 
         observer.observe(document.body, { childList: true, subtree: true });
 
-        setTimeout(() => {
-            observer.disconnect();
+        timeoutId = setTimeout(() => {
+            if (resolved) return;
+            resolved = true;
+            cleanup();
             reject(new Error(`Timeout waiting for ${selector}`));
         }, timeout);
     });
 }
 
-// Task 5: Helper - Wait for button text to change
+// Task 5: Helper - Wait for button text to change (with proper cleanup)
 function waitForButtonText(selector, text, timeout = 60000) {
     return new Promise((resolve, reject) => {
+        let interval = null;
+        let timeoutId = null;
+        let resolved = false;
+
+        const cleanup = () => {
+            if (interval) {
+                clearInterval(interval);
+                interval = null;
+            }
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+            }
+        };
+
         const check = () => {
+            if (resolved) return;
             const btn = document.querySelector(selector);
             if (btn && btn.textContent.includes(text)) {
-                clearInterval(interval);
-                return resolve();
+                resolved = true;
+                cleanup();
+                resolve();
             }
         };
 
         check();
-        const interval = setInterval(check, 500);
+        interval = setInterval(check, 500);
 
-        setTimeout(() => {
-            clearInterval(interval);
+        timeoutId = setTimeout(() => {
+            if (resolved) return;
+            resolved = true;
+            cleanup();
             reject(new Error(`Timeout waiting for "${text}"`));
         }, timeout);
     });
@@ -1349,18 +1387,35 @@ async function processNextAccount() {
     logExportAll(`[${currentIndex + 1}/${total}] ${account.title}`);
 
     try {
-        // 1. Find fresh row element (DOM may have been refreshed)
+        // 1. Verify we're on the accounts list page
+        if (!isAccountsListPage()) {
+            logExportAll('Not on list page, waiting...');
+            await waitForElement('table.accounts-table', 10000);
+            await sleep(1000);
+        }
+
+        // 2. Find fresh row element (DOM may have been refreshed)
         const rowElement = findRowByAccountNumber(account.number);
         if (!rowElement) {
-            throw new Error('Row not found in table');
+            // Maybe we're on wrong pagination page - log and skip
+            throw new Error('Row not found in table (may be on different page)');
         }
 
         // 2. Click account row to go to details
         rowElement.click();
 
-        // 2. Wait for export button to appear (details page loaded)
-        await waitForElement('#hsbc-bot-export-btn', 15000);
-        await sleep(500); // Brief settle time
+        // 3. Wait for details page to load (look for header actions container first)
+        await waitForElement('ul.header-actions', 10000);
+        await sleep(500); // Let page settle
+
+        // 4. Force button injection if not present
+        if (!document.getElementById('hsbc-bot-export-btn')) {
+            await injectButton();
+            await sleep(300);
+        }
+
+        // 5. Wait for export button (should be there now)
+        await waitForElement('#hsbc-bot-export-btn', 5000);
 
         // 3. Send metadata to background for filename
         chrome.runtime.sendMessage({
@@ -1372,8 +1427,15 @@ async function processNextAccount() {
             dateTo: endDate.replace(/\//g, '-')
         });
 
-        // 4. Set dates and trigger export
+        // 4. Set current account for download verification
+        setCurrentExportAccount(account.number);
+
+        // 5. Reset button state and trigger export
         const btn = document.getElementById('hsbc-bot-export-btn');
+        btn.textContent = 'Auto Export';
+        btn.style.backgroundColor = '';
+        btn.style.color = '';
+        btn.style.borderColor = '';
         btn.setAttribute('data-start', startDate);
         btn.setAttribute('data-end', endDate);
         btn.click();
@@ -1395,17 +1457,32 @@ async function processNextAccount() {
         const backBtn = document.querySelector('a.detail-header__info-back');
         if (backBtn) {
             backBtn.click();
+        } else {
+            // Fallback: use browser back
+            window.history.back();
         }
 
         // 7. Wait for accounts table to appear
-        await waitForElement('table.accounts-table', 10000);
-        await sleep(1000); // Let table populate
+        await waitForElement('table.accounts-table', 15000);
+        await sleep(1500); // Let table fully populate
 
-        // Note: We do NOT re-extract accounts here to preserve the selected list
-        // Fresh DOM references are obtained via findRowByAccountNumber()
+        // 8. Verify we're on list page
+        if (!isAccountsListPage()) {
+            logExportAll('Warning: Not on list page, attempting recovery...');
+            window.history.back();
+            await waitForElement('table.accounts-table', 10000);
+            await sleep(1000);
+        }
 
     } catch (err) {
         logExportAll(`Error returning to list: ${err.message}`);
+        // Recovery: try to get back to list page
+        try {
+            window.history.back();
+            await sleep(2000);
+        } catch (e) {
+            // Give up on recovery
+        }
     }
 
     // 8. Move to next account
@@ -1489,6 +1566,17 @@ function finishExportAll() {
     updateExportAllButton(cancelled ? 'idle' : 'done');
 }
 
+// --- Track current export for verification ---
+let currentExportAccount = null;
+
+function setCurrentExportAccount(accountNumber) {
+    currentExportAccount = accountNumber;
+}
+
+function clearCurrentExportAccount() {
+    currentExportAccount = null;
+}
+
 // --- Listen for download confirmation from background ---
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Skip on redirect page
@@ -1496,14 +1584,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     console.log("[HSBC Bot] Message received:", message);
     if (message.action === "download_started") {
-        log("=== DOWNLOAD STARTED ===");
         const btn = document.getElementById('hsbc-bot-export-btn');
-        if (btn) {
-            btn.textContent = 'DOWNLOAD DONE';
-            btn.style.backgroundColor = '#28a745';
-            btn.style.color = '#fff';
-            btn.style.borderColor = '#28a745';
-            log("Button updated!");
+        if (!btn) return;
+
+        // Verify the download is for the account we're expecting
+        if (currentExportAccount && message.context) {
+            if (message.context.number !== currentExportAccount) {
+                console.log(`[HSBC Bot] Download context mismatch: expected ${currentExportAccount}, got ${message.context.number}`);
+                return; // Ignore - not our download
+            }
         }
+
+        log("=== DOWNLOAD CONFIRMED ===");
+        btn.textContent = 'DOWNLOAD DONE';
+        btn.style.backgroundColor = '#28a745';
+        btn.style.color = '#fff';
+        btn.style.borderColor = '#28a745';
+        clearCurrentExportAccount();
     }
 }); 

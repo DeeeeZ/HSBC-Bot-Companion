@@ -15,19 +15,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     // Set download context for filename (from content.js before export)
     if (message.action === "set_download_context") {
+        const contextTimestamp = Date.now();
         pendingDownloadContext = {
             title: message.accountTitle,
             number: message.accountNumber,
             currency: message.currency || 'UNKNOWN',
             dateFrom: message.dateFrom,
             dateTo: message.dateTo,
-            timestamp: Date.now()
+            timestamp: contextTimestamp
         };
         console.log("[HSBC Bot] Download context set:", pendingDownloadContext);
 
-        // Auto-clear after 60s (safety)
+        // Auto-clear after 60s (safety) - use closure to capture timestamp
         setTimeout(() => {
-            if (pendingDownloadContext && pendingDownloadContext.timestamp === message.timestamp) {
+            if (pendingDownloadContext && pendingDownloadContext.timestamp === contextTimestamp) {
                 pendingDownloadContext = null;
                 console.log("[HSBC Bot] Download context expired");
             }
@@ -82,32 +83,25 @@ chrome.downloads.onCreated.addListener((downloadItem) => {
     // without some tricks if strictly background. 
     // But we know we are looking for the active tab that is on the redirect page.
     
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs && tabs.length > 0) {
-            const activeTab = tabs[0];
-            if (activeTab.url && activeTab.url.includes("GIBRfdRedirect")) {
-                console.log(`Closing tab ${activeTab.id} due to download start and matching URL.`);
-
-                // Allow a tiny buffer (500ms) to ensure browser registers the download handoff
-                setTimeout(() => {
-                    chrome.tabs.remove(activeTab.id).catch(() => {});
-                }, 500);
-            }
-        }
-    });
-
-    // Strategy 2: If we want to be more specific, we can search all tabs for the redirect URL
+    // Close all redirect tabs (single consolidated strategy)
     chrome.tabs.query({ url: "*://*.hsbcnet.com/*GIBRfdRedirect*" }, (tabs) => {
+        if (!tabs || tabs.length === 0) return;
+
+        // Track which tabs we're closing to avoid duplicates
+        const closedTabs = new Set();
+
         tabs.forEach(tab => {
-            console.log("Found Redirect Tab:", tab.url);
-            // Close it
+            if (closedTabs.has(tab.id)) return;
+            closedTabs.add(tab.id);
+
+            console.log("Closing redirect tab:", tab.id, tab.url);
             setTimeout(() => {
                 chrome.tabs.remove(tab.id).catch(() => {});
-            }, 500);
+            }, 300);
         });
     });
 
-    // Notify ALL hsbcnet tabs that download started (content script checks if button exists)
+    // Notify ALL hsbcnet tabs that download started (include context for verification)
     chrome.tabs.query({ url: "*://*.hsbcnet.com/*" }, (tabs) => {
         console.log("Found HSBC tabs:", tabs.length);
         tabs.forEach(tab => {
@@ -115,7 +109,13 @@ chrome.downloads.onCreated.addListener((downloadItem) => {
             if (tab.url && tab.url.includes("GIBRfdRedirect")) return;
 
             console.log("Notifying tab:", tab.id, tab.url);
-            chrome.tabs.sendMessage(tab.id, { action: "download_started" }).catch(err => {
+            chrome.tabs.sendMessage(tab.id, {
+                action: "download_started",
+                context: pendingDownloadContext ? {
+                    number: pendingDownloadContext.number,
+                    title: pendingDownloadContext.title
+                } : null
+            }).catch(err => {
                 console.log("Tab not listening:", tab.id);
             });
         });
