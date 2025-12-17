@@ -9,6 +9,7 @@ Chrome extension (Manifest V3) automating HSBCnet banking portal workflows. Desi
 **Features:**
 - **Export All** - Batch export all accounts from list page (loops through 100+ accounts automatically)
 - **Smart File Naming** - Downloads renamed to `{Title}_{AccountNumber}_{Currency}_{DateFrom}_TO_{DateTo}.xlsx`
+- **Keep Alive** - Prevents 5-min session timeout by dispatching activity every 2 min (ON by default)
 - Auto Excel Export with Smart Wait (MutationObserver-based)
 - Download-triggered auto-close of redirect windows
 
@@ -79,7 +80,9 @@ F12 DevTools on HSBCnet page → Console (filter by "[HSBC Bot]")
 | Element | Selector |
 |---------|----------|
 | Export All Button | `#hsbc-bot-export-all-btn` |
-| Toolbar | `section.table-header-ai ul` |
+| Keep Alive Checkbox | `#hsbc-bot-keep-alive-btn` |
+| Toolbar (left) | `section.table-header-ai ul` |
+| Toolbar (right) | `ul.table-actions__group--right-ai` |
 | Account Rows | `tr.table__row--clickable` |
 | Currency Headers | `tr.table__row--title td.presentation-unit__name` |
 | Account Number | `td.table__cell--sorted span` |
@@ -107,6 +110,7 @@ F12 DevTools on HSBCnet page → Console (filter by "[HSBC Bot]")
 | `safeSetValue(element, value)` | Robust date input setter with event dispatch |
 | `extractAccountsFromTable()` | Parses account list with currency grouping |
 | `findRowByAccountNumber(num)` | Re-finds row after DOM refresh |
+| `toggleKeepAlive()` | Toggles session keep-alive interval (2 min mousemove) |
 
 ## RPA Integration
 

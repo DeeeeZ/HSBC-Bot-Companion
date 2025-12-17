@@ -10,13 +10,18 @@ Docs/
 # Reference data
 Accounts Table.txt
 !popup.html
+!HSBC_Bot_Presentation.html
 # Screenshots
 *.jpeg
 *.jpg
 *.png
 !ICON.png
+!HSBC_Bot_Presentation.html
 
 # OS files
 .DS_Store
 Thumbs.db
 HSBC_Bot_Companion.zip
+color-system.md
+colors.css
+design-tokens.json

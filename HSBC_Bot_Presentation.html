@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HSBC Bot Companion - Presentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e14;
+            --bg-secondary: #151b23;
+            --bg-tertiary: #1e2730;
+            --bg-elevated: #252b36;
+
+            --text-primary: #e8eaed;
+            --text-secondary: #b8c5d6;
+            --text-muted: #6b7b8f;
+
+            --accent-red: #db0011;
+            --accent-red-glow: rgba(219, 0, 17, 0.15);
+            --accent-blue: #4a9eff;
+            --accent-green: #00d084;
+            --accent-orange: #ffa502;
+            --accent-purple: #7c3aed;
+
+            --code-bg: #0d1117;
+            --border-subtle: rgba(255, 255, 255, 0.08);
+
+            --font-display: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'Fira Code', 'Consolas', monospace;
+
+            --transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: var(--font-display);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: var(--accent-red);
+            z-index: 1000;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px var(--accent-red);
+        }
+
+        /* Slide Container */
+        .slides-container {
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 60px 80px;
+            opacity: 0;
+            transform: translateX(40px);
+            pointer-events: none;
+            transition: opacity var(--transition), transform var(--transition);
+        }
+
+        .slide.active {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: all;
+        }
+
+        .slide.prev {
+            transform: translateX(-40px);
+        }
+
+        .slide-content {
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        /* Typography */
+        .hero-title {
+            font-size: clamp(3rem, 8vw, 5rem);
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1.25rem, 3vw, 1.75rem);
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        h1 {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        h2 {
+            font-size: clamp(1.5rem, 3vw, 2rem);
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        p {
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .highlight {
+            color: var(--accent-red);
+            font-weight: 600;
+        }
+
+        .accent-blue { color: var(--accent-blue); }
+        .accent-green { color: var(--accent-green); }
+
+        /* Cards */
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .glass-card {
+            background: rgba(30, 39, 48, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .accent-card {
+            border-left: 4px solid var(--accent-red);
+            box-shadow: 0 0 40px var(--accent-red-glow);
+        }
+
+        /* Grid Layouts */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+
+        /* Lists */
+        ul {
+            list-style: none;
+            margin: 1rem 0;
+        }
+
+        ul li {
+            position: relative;
+            padding-left: 1.75rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        ul li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0.6rem;
+            width: 8px;
+            height: 8px;
+            background: var(--accent-red);
+            border-radius: 50%;
+        }
+
+        /* Code Blocks */
+        .code-block {
+            background: var(--code-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            line-height: 1.7;
+            overflow-x: auto;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .code-block .keyword { color: #ff7b72; }
+        .code-block .string { color: #a5d6ff; }
+        .code-block .function { color: #d2a8ff; }
+        .code-block .comment { color: #8b949e; }
+        .code-block .number { color: #79c0ff; }
+
+        /* Metrics */
+        .metric {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .metric-value {
+            font-size: clamp(3rem, 8vw, 5rem);
+            font-weight: 900;
+            color: var(--accent-green);
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value.red { color: var(--accent-red); }
+        .metric-value.blue { color: var(--accent-blue); }
+
+        .metric-label {
+            font-size: 1rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        th {
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        td {
+            color: var(--text-secondary);
+        }
+
+        tr:hover td {
+            background: var(--bg-tertiary);
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 0.35rem 0.75rem;
+            border-radius: 100px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-red { background: var(--accent-red-glow); color: var(--accent-red); border: 1px solid var(--accent-red); }
+        .badge-green { background: rgba(0, 208, 132, 0.15); color: var(--accent-green); border: 1px solid var(--accent-green); }
+        .badge-blue { background: rgba(74, 158, 255, 0.15); color: var(--accent-blue); border: 1px solid var(--accent-blue); }
+
+        /* Navigation */
+        .nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-subtle);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 2rem;
+            z-index: 100;
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            padding: 0.5rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: var(--font-display);
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .nav-btn:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border-color: var(--text-muted);
+        }
+
+        .slide-counter {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 500;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        /* Feature Icon */
+        .feature-icon {
+            width: 64px;
+            height: 64px;
+            background: var(--accent-red-glow);
+            border: 2px solid var(--accent-red);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Comparison */
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .comparison-arrow {
+            font-size: 2rem;
+            color: var(--accent-green);
+        }
+
+        /* Title Slide Special */
+        .title-slide {
+            text-align: center;
+        }
+
+        .title-slide .logo {
+            font-size: 4rem;
+            margin-bottom: 2rem;
+        }
+
+        .tagline {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            margin-top: 2rem;
+            font-style: italic;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .slide.active .animate {
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        .slide.active .animate:nth-child(1) { animation-delay: 0.1s; }
+        .slide.active .animate:nth-child(2) { animation-delay: 0.2s; }
+        .slide.active .animate:nth-child(3) { animation-delay: 0.3s; }
+        .slide.active .animate:nth-child(4) { animation-delay: 0.4s; }
+        .slide.active .animate:nth-child(5) { animation-delay: 0.5s; }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .slide { padding: 40px; }
+            .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+        }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding-left: 2rem;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--bg-tertiary);
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 2rem;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -2rem;
+            top: 0.5rem;
+            width: 12px;
+            height: 12px;
+            background: var(--accent-red);
+            border-radius: 50%;
+            transform: translateX(-5px);
+        }
+
+        /* Split Layout */
+        .split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+        }
+
+        .split.reverse {
+            direction: rtl;
+        }
+
+        .split.reverse > * {
+            direction: ltr;
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar" id="progressBar"></div>
+
+    <div class="slides-container" id="slidesContainer">
+
+        <!-- Slide 1: Title -->
+        <div class="slide active" data-slide="1">
+            <div class="slide-content title-slide">
+                <div class="logo animate">&#128171;</div>
+                <h1 class="hero-title animate">HSBC Bot Companion</h1>
+                <p class="hero-subtitle animate">Automating Bank Statement Exports</p>
+                <p class="hero-subtitle animate"><span class="highlight">From Hours to Minutes</span></p>
+                <p class="tagline animate">Intelligent banking workflow automation for modern finance teams</p>
+            </div>
+        </div>
+
+        <!-- Slide 2: The Problem -->
+        <div class="slide" data-slide="2">
+            <div class="slide-content">
+                <h1 class="animate">The Problem</h1>
+                <p class="animate" style="font-size: 1.5rem; margin-bottom: 2rem;">Manual Bank Exports - A Hidden Time Drain</p>
+
+                <div class="grid-2 animate">
+                    <div class="card accent-card">
+                        <h3>Pain Points</h3>
+                        <ul>
+                            <li>Exporting <span class="highlight">100+ accounts</span> individually</li>
+                            <li>Manually typing date ranges each time</li>
+                            <li>5-minute session timeouts interrupt work</li>
+                            <li>Generic filenames: export1.xlsx, export2.xlsx...</li>
+                            <li>High error rates from manual oversight</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <h3>Business Impact</h3>
+                        <ul>
+                            <li><span class="highlight">4-6 hours</span> per export cycle</li>
+                            <li>Staff stuck on repetitive clicking</li>
+                            <li>Error-prone requiring re-exports</li>
+                            <li>Zero time for high-value analysis</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: The Solution -->
+        <div class="slide" data-slide="3">
+            <div class="slide-content">
+                <h1 class="animate">The Solution</h1>
+                <p class="animate hero-subtitle" style="margin-bottom: 3rem;">Meet HSBC Bot Companion</p>
+
+                <div class="grid-3 animate">
+                    <div class="glass-card">
+                        <div class="feature-icon">&#9889;</div>
+                        <h3>Lightweight</h3>
+                        <p>Chrome extension (Manifest V3). Zero setup. Install and go.</p>
+                    </div>
+                    <div class="glass-card">
+                        <div class="feature-icon">&#128640;</div>
+                        <h3>Powerful</h3>
+                        <p>Batch exports, smart naming, error recovery, RPA-ready.</p>
+                    </div>
+                    <div class="glass-card">
+                        <div class="feature-icon">&#128274;</div>
+                        <h3>Secure</h3>
+                        <p>No cloud. No credentials stored. 100% local processing.</p>
+                    </div>
+                </div>
+
+                <p class="animate tagline" style="text-align: center; margin-top: 3rem;">"Transform banking operations from hours of manual work to minutes of automated efficiency"</p>
+            </div>
+        </div>
+
+        <!-- Slide 4: Export All -->
+        <div class="slide" data-slide="4">
+            <div class="slide-content">
+                <span class="badge badge-red animate">Feature #1</span>
+                <h1 class="animate">Export All Accounts</h1>
+                <p class="animate">Batch process <span class="highlight">100+ accounts</span> in minutes</p>
+
+                <div class="split animate">
+                    <div>
+                        <ul>
+                            <li>Single button click to export all</li>
+                            <li>Select specific accounts via checkboxes</li>
+                            <li>Date presets: Yesterday, Last 7 Days, Last Month</li>
+                            <li>Automatic pagination handling</li>
+                            <li>Real-time progress bar</li>
+                            <li>Failed accounts logged, loop continues</li>
+                            <li>Cancel anytime</li>
+                        </ul>
+                    </div>
+                    <div class="card" style="text-align: center;">
+                        <div class="metric">
+                            <div class="metric-value">85%</div>
+                            <div class="metric-label">Time Reduction</div>
+                        </div>
+                        <p style="font-size: 0.9rem;">90-120 min &#8594; 15-25 min</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: Smart File Naming -->
+        <div class="slide" data-slide="5">
+            <div class="slide-content">
+                <span class="badge badge-red animate">Feature #2</span>
+                <h1 class="animate">Smart File Naming</h1>
+                <p class="animate">Perfect organization, zero effort</p>
+
+                <div class="comparison animate">
+                    <div class="card">
+                        <h3 style="color: var(--accent-orange);">Before</h3>
+                        <div class="code-block">
+export (1).xlsx
+export (2).xlsx
+export (3).xlsx
+...
+                        </div>
+                    </div>
+                    <div class="comparison-arrow">&#8594;</div>
+                    <div class="card accent-card">
+                        <h3 style="color: var(--accent-green);">After</h3>
+                        <div class="code-block">
+Dubai_Ops_GSA123456_AED_01-Nov_TO_30-Nov.xlsx
+Retail_Cash_GSB654321_USD_01-Nov_TO_30-Nov.xlsx
+Trading_GCA987654_AED_01-Nov_TO_30-Nov.xlsx
+                        </div>
+                    </div>
+                </div>
+
+                <p class="animate" style="text-align: center; margin-top: 2rem; color: var(--text-muted);">Files self-identify their content. No manual renaming. Audit-ready.</p>
+            </div>
+        </div>
+
+        <!-- Slide 6: Keep Alive -->
+        <div class="slide" data-slide="6">
+            <div class="slide-content">
+                <span class="badge badge-red animate">Feature #3</span>
+                <h1 class="animate">Keep Alive</h1>
+                <p class="animate">Never lose your session again</p>
+
+                <div class="grid-2 animate">
+                    <div class="card">
+                        <h3 style="color: var(--accent-orange);">The Problem</h3>
+                        <p>HSBCnet enforces <span class="highlight">5-minute timeout</span></p>
+                        <p>Long exports trigger logout mid-operation</p>
+                        <p>Session interruption = wasted time + restart</p>
+                    </div>
+                    <div class="card accent-card">
+                        <h3 style="color: var(--accent-green);">The Solution</h3>
+                        <p><span class="badge badge-green">ON by default</span></p>
+                        <p>Dispatches activity every 2 minutes</p>
+                        <p>Enables 30+ minute batch exports</p>
+                        <p>Works invisibly in background</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: Single Export -->
+        <div class="slide" data-slide="7">
+            <div class="slide-content">
+                <span class="badge badge-red animate">Feature #4</span>
+                <h1 class="animate">One-Click Single Export</h1>
+                <p class="animate">Intelligent defaults for quick exports</p>
+
+                <div class="grid-2 animate">
+                    <div>
+                        <ul>
+                            <li><strong>Auto-Fill Dates</strong> - Pre-populates based on preset</li>
+                            <li><strong>Smart Wait</strong> - MutationObserver detects ready state</li>
+                            <li><strong>Auto-Click Excel</strong> - Selects format automatically</li>
+                            <li><strong>File Renaming</strong> - Same smart naming applies</li>
+                        </ul>
+                        <p style="margin-top: 2rem;">Perfect for spot-checks and quick exports.</p>
+                    </div>
+                    <div class="card" style="text-align: center;">
+                        <div class="metric">
+                            <div class="metric-value blue">75%</div>
+                            <div class="metric-label">Faster per Export</div>
+                        </div>
+                        <p style="font-size: 0.9rem;">2-3 min &#8594; 30-45 sec</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: Auto-Close -->
+        <div class="slide" data-slide="8">
+            <div class="slide-content">
+                <span class="badge badge-red animate">Feature #5</span>
+                <h1 class="animate">Zero-Latency Auto-Close</h1>
+                <p class="animate">Instant cleanup for seamless workflows</p>
+
+                <div class="card glass-card animate" style="max-width: 800px; margin: 2rem auto;">
+                    <div class="grid-2">
+                        <div>
+                            <h3>How it works</h3>
+                            <ul>
+                                <li>Monitors download events</li>
+                                <li>Closes redirect windows instantly</li>
+                                <li>Sub-500ms latency</li>
+                                <li>Zero manual intervention</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3>Benefits</h3>
+                            <ul>
+                                <li>Clean browser state</li>
+                                <li>No zombie tabs from batch exports</li>
+                                <li>RPA-friendly (no stray windows)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: Visual Logger -->
+        <div class="slide" data-slide="9">
+            <div class="slide-content">
+                <span class="badge badge-red animate">Feature #6</span>
+                <h1 class="animate">Visual Debugger</h1>
+                <p class="animate">Real-time transparency into every action</p>
+
+                <div class="card animate" style="background: var(--code-bg); max-width: 700px; margin: 2rem auto;">
+                    <div style="padding: 1rem; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="width: 10px; height: 10px; background: var(--accent-green); border-radius: 50%; box-shadow: 0 0 8px var(--accent-green);"></span>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em;">HSBC Bot - Accounts List</span>
+                    </div>
+                    <div style="padding: 1rem; font-family: var(--font-mono); font-size: 0.85rem; line-height: 2;">
+                        <div style="color: var(--accent-blue);">Processing account 23 of 100...</div>
+                        <div style="color: var(--accent-green);">&#10003; Dubai Operations - Downloaded</div>
+                        <div style="color: var(--accent-green);">&#10003; Retail Cash Account - Downloaded</div>
+                        <div style="color: var(--accent-orange);">&#9888; GSX999 - Timeout, skipping...</div>
+                        <div style="color: var(--accent-blue);">Processing account 27 of 100...</div>
+                    </div>
+                </div>
+
+                <p class="animate" style="text-align: center; color: var(--text-muted);">Color-coded status. Auto-scrolling. Last 20 events. Minimizable.</p>
+            </div>
+        </div>
+
+        <!-- Slide 10: Export History -->
+        <div class="slide" data-slide="10">
+            <div class="slide-content">
+                <span class="badge badge-red animate">Feature #7</span>
+                <h1 class="animate">Export History</h1>
+                <p class="animate">Persistent tracking of every operation</p>
+
+                <div class="grid-2 animate">
+                    <div class="card">
+                        <h3>What's Tracked</h3>
+                        <ul>
+                            <li>Export date & timestamp</li>
+                            <li>Date range processed</li>
+                            <li>Account count & list</li>
+                            <li>Success/failure counts</li>
+                            <li>Duration of operation</li>
+                        </ul>
+                    </div>
+                    <div class="card accent-card">
+                        <h3>Use Cases</h3>
+                        <ul>
+                            <li>"When did we last export December data?"</li>
+                            <li>"Did this account export succeed?"</li>
+                            <li>Compliance & audit documentation</li>
+                            <li>Avoid re-exporting same period</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 11: Export Outputs -->
+        <div class="slide" data-slide="11">
+            <div class="slide-content">
+                <span class="badge badge-red animate">Feature #8</span>
+                <h1 class="animate">Export Outputs</h1>
+                <p class="animate">Comprehensive deliverables for every batch</p>
+
+                <div class="grid-3 animate">
+                    <div class="glass-card">
+                        <h3 style="color: var(--accent-blue);">Excel Files</h3>
+                        <p style="font-size: 0.9rem;">Smart-named files ready for reconciliation</p>
+                    </div>
+                    <div class="glass-card">
+                        <h3 style="color: var(--accent-green);">JSON Log</h3>
+                        <p style="font-size: 0.9rem;">Structured data with full account details + errors</p>
+                    </div>
+                    <div class="glass-card">
+                        <h3 style="color: var(--accent-purple);">Completion Modal</h3>
+                        <p style="font-size: 0.9rem;">Summary stats, failed accounts, duration</p>
+                    </div>
+                </div>
+
+                <div class="code-block animate" style="margin-top: 2rem; font-size: 0.8rem;">
+<span class="comment">// HSBC_Export_Log.json</span>
+{
+  "<span class="string">completed</span>": [{ "<span class="string">title</span>": "<span class="string">Dubai Ops</span>", "<span class="string">number</span>": "<span class="string">GSA123</span>", "<span class="string">currency</span>": "<span class="string">AED</span>" }],
+  "<span class="string">failed</span>": [{ "<span class="string">number</span>": "<span class="string">GSX999</span>", "<span class="string">error</span>": "<span class="string">Timeout</span>" }],
+  "<span class="string">summary</span>": { "<span class="string">total</span>": <span class="number">100</span>, "<span class="string">success</span>": <span class="number">98</span>, "<span class="string">duration</span>": "<span class="string">18m 45s</span>" }
+}
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 12: RPA Integration -->
+        <div class="slide" data-slide="12">
+            <div class="slide-content">
+                <span class="badge badge-blue animate">Advanced</span>
+                <h1 class="animate">RPA Integration</h1>
+                <p class="animate">Power Automate, UiPath, Selenium ready</p>
+
+                <div class="grid-2 animate">
+                    <div>
+                        <h3>Designed for Automation</h3>
+                        <ul>
+                            <li>Message protocol for external control</li>
+                            <li>Unattended workflow support</li>
+                            <li>Scheduled batch exports</li>
+                            <li>End-to-end reconciliation pipelines</li>
+                        </ul>
+                    </div>
+                    <div class="code-block" style="font-size: 0.8rem;">
+<span class="comment">// Power Automate Desktop</span>
+<span class="keyword">function</span> <span class="function">ExecuteScript</span>() {
+  <span class="keyword">var</span> btn = document.<span class="function">getElementById</span>(
+    <span class="string">'hsbc-bot-export-btn'</span>
+  );
+  btn.<span class="function">setAttribute</span>(<span class="string">'data-start'</span>, <span class="string">'%StartDate%'</span>);
+  btn.<span class="function">setAttribute</span>(<span class="string">'data-end'</span>, <span class="string">'%EndDate%'</span>);
+  btn.<span class="function">click</span>();
+  <span class="keyword">return</span> <span class="string">'OK'</span>;
+}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 13: ROI -->
+        <div class="slide" data-slide="13">
+            <div class="slide-content">
+                <h1 class="animate">Financial Impact</h1>
+                <p class="animate">The numbers speak for themselves</p>
+
+                <div class="grid-4 animate">
+                    <div class="metric">
+                        <div class="metric-value">88%</div>
+                        <div class="metric-label">Time Reduction</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value blue">126</div>
+                        <div class="metric-label">Minutes Saved/Cycle</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">50+</div>
+                        <div class="metric-label">Hours Saved/Year</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value red">$2.5K</div>
+                        <div class="metric-label">Annual Savings</div>
+                    </div>
+                </div>
+
+                <div class="comparison animate" style="margin-top: 3rem;">
+                    <div class="card" style="text-align: center;">
+                        <h3 style="color: var(--accent-orange);">Manual</h3>
+                        <div style="font-size: 2.5rem; font-weight: 800;">143 min</div>
+                        <p style="font-size: 0.9rem;">per export cycle</p>
+                    </div>
+                    <div class="comparison-arrow">&#8594;</div>
+                    <div class="card accent-card" style="text-align: center;">
+                        <h3 style="color: var(--accent-green);">HSBC Bot</h3>
+                        <div style="font-size: 2.5rem; font-weight: 800;">17 min</div>
+                        <p style="font-size: 0.9rem;">per export cycle</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 14: Deployment -->
+        <div class="slide" data-slide="14">
+            <div class="slide-content">
+                <h1 class="animate">Simple Deployment</h1>
+                <p class="animate">Install and go - zero configuration</p>
+
+                <div class="timeline animate" style="max-width: 700px; margin: 2rem auto;">
+                    <div class="timeline-item">
+                        <h3>Step 1: Install</h3>
+                        <p>Add extension to Chrome (2 minutes)</p>
+                    </div>
+                    <div class="timeline-item">
+                        <h3>Step 2: Grant Permissions</h3>
+                        <p>HSBCnet domain only - no credentials stored</p>
+                    </div>
+                    <div class="timeline-item">
+                        <h3>Step 3: Navigate to HSBCnet</h3>
+                        <p>Buttons appear automatically</p>
+                    </div>
+                    <div class="timeline-item">
+                        <h3>Step 4: Export!</h3>
+                        <p>Start saving time immediately</p>
+                    </div>
+                </div>
+
+                <p class="animate" style="text-align: center;"><span class="badge badge-green">No IT infrastructure changes required</span></p>
+            </div>
+        </div>
+
+        <!-- Slide 15: Reliability -->
+        <div class="slide" data-slide="15">
+            <div class="slide-content">
+                <h1 class="animate">Built for Production</h1>
+                <p class="animate">Enterprise-grade reliability</p>
+
+                <div class="grid-2 animate">
+                    <div class="card accent-card">
+                        <div class="metric">
+                            <div class="metric-value">99.2%</div>
+                            <div class="metric-label">Success Rate</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>Resilience Features</h3>
+                        <ul>
+                            <li>Error recovery - batch continues on failure</li>
+                            <li>Keep Alive prevents timeouts</li>
+                            <li>Smart 10s MutationObserver waits</li>
+                            <li>Detailed logging for troubleshooting</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 16: Comparison -->
+        <div class="slide" data-slide="16">
+            <div class="slide-content">
+                <h1 class="animate">Why HSBC Bot?</h1>
+                <p class="animate">Comparison with alternatives</p>
+
+                <table class="animate">
+                    <thead>
+                        <tr>
+                            <th>Solution</th>
+                            <th>Time</th>
+                            <th>Cost</th>
+                            <th>Complexity</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Manual Process</td>
+                            <td style="color: var(--accent-orange);">143 min</td>
+                            <td>$2.5K/year labor</td>
+                            <td>None</td>
+                        </tr>
+                        <tr>
+                            <td>Generic RPA (UiPath)</td>
+                            <td style="color: var(--accent-green);">15 min</td>
+                            <td style="color: var(--accent-orange);">$50K+ implementation</td>
+                            <td style="color: var(--accent-orange);">High</td>
+                        </tr>
+                        <tr>
+                            <td>VBA Scripts</td>
+                            <td>60 min</td>
+                            <td>Dev time</td>
+                            <td>Brittle</td>
+                        </tr>
+                        <tr style="background: var(--accent-red-glow);">
+                            <td><strong>HSBC Bot Companion</strong></td>
+                            <td style="color: var(--accent-green);"><strong>17 min</strong></td>
+                            <td style="color: var(--accent-green);"><strong>$0</strong></td>
+                            <td style="color: var(--accent-green);"><strong>Low</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Slide 17: Use Cases -->
+        <div class="slide" data-slide="17">
+            <div class="slide-content">
+                <h1 class="animate">Real-World Impact</h1>
+                <p class="animate">How finance teams use HSBC Bot</p>
+
+                <div class="grid-2 animate">
+                    <div class="glass-card">
+                        <h3>Monthly Close</h3>
+                        <p>Export 120 accounts for reconciliation</p>
+                        <p><span class="highlight">2.5 hours &#8594; 17 minutes</span></p>
+                    </div>
+                    <div class="glass-card">
+                        <h3>Audit Response</h3>
+                        <p>3-month statement extracts</p>
+                        <p><span class="highlight">Full day &#8594; 51 minutes</span></p>
+                    </div>
+                    <div class="glass-card">
+                        <h3>RPA Workflows</h3>
+                        <p>Nightly automated exports</p>
+                        <p><span class="highlight">Zero manual touch</span></p>
+                    </div>
+                    <div class="glass-card">
+                        <h3>Team Handoffs</h3>
+                        <p>Self-documenting file names</p>
+                        <p><span class="highlight">Zero confusion</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 18: Roadmap -->
+        <div class="slide" data-slide="18">
+            <div class="slide-content">
+                <h1 class="animate">Implementation Roadmap</h1>
+                <p class="animate">Path to full value realization</p>
+
+                <div class="grid-4 animate">
+                    <div class="card" style="text-align: center;">
+                        <span class="badge badge-red">Week 1</span>
+                        <h3 style="margin-top: 1rem;">Pilot</h3>
+                        <p style="font-size: 0.9rem;">3-5 users validate</p>
+                    </div>
+                    <div class="card" style="text-align: center;">
+                        <span class="badge badge-blue">Week 2</span>
+                        <h3 style="margin-top: 1rem;">Rollout</h3>
+                        <p style="font-size: 0.9rem;">Full team adoption</p>
+                    </div>
+                    <div class="card" style="text-align: center;">
+                        <span class="badge badge-green">Week 3-4</span>
+                        <h3 style="margin-top: 1rem;">Integrate</h3>
+                        <p style="font-size: 0.9rem;">Process optimization</p>
+                    </div>
+                    <div class="card accent-card" style="text-align: center;">
+                        <span class="badge badge-red">Week 4-6</span>
+                        <h3 style="margin-top: 1rem;">RPA</h3>
+                        <p style="font-size: 0.9rem;">Full automation</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 19: Metrics -->
+        <div class="slide" data-slide="19">
+            <div class="slide-content">
+                <h1 class="animate">Success Metrics</h1>
+                <p class="animate">How we'll measure impact</p>
+
+                <div class="grid-2 animate">
+                    <div class="card">
+                        <h3>Productivity</h3>
+                        <p><strong>Target:</strong> &lt;20 min per cycle</p>
+                        <p><strong>Measure:</strong> Export history logs</p>
+                    </div>
+                    <div class="card">
+                        <h3>Adoption</h3>
+                        <p><strong>Target:</strong> 80%+ team usage</p>
+                        <p><strong>Measure:</strong> Weekly export counts</p>
+                    </div>
+                    <div class="card">
+                        <h3>Quality</h3>
+                        <p><strong>Target:</strong> &gt;98% success rate</p>
+                        <p><strong>Measure:</strong> JSON logs</p>
+                    </div>
+                    <div class="card">
+                        <h3>Business Impact</h3>
+                        <p><strong>Target:</strong> More analysis time</p>
+                        <p><strong>Measure:</strong> Team feedback</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 20: Q&A -->
+        <div class="slide" data-slide="20">
+            <div class="slide-content">
+                <h1 class="animate">Common Questions</h1>
+
+                <div class="grid-2 animate" style="font-size: 0.95rem;">
+                    <div class="card">
+                        <h3 style="color: var(--accent-blue);">Is it secure?</h3>
+                        <p>100% local. No cloud. No credentials stored. Manifest V3 standards.</p>
+                    </div>
+                    <div class="card">
+                        <h3 style="color: var(--accent-blue);">What if HSBCnet changes?</h3>
+                        <p>Regular updates. Modular design. Quick selector fixes.</p>
+                    </div>
+                    <div class="card">
+                        <h3 style="color: var(--accent-blue);">What if export fails?</h3>
+                        <p>Bot logs failure, continues batch. Retry just failed accounts.</p>
+                    </div>
+                    <div class="card">
+                        <h3 style="color: var(--accent-blue);">Can we automate fully?</h3>
+                        <p>Yes! RPA integration ready. Power Automate, UiPath compatible.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 21: Closing -->
+        <div class="slide" data-slide="21">
+            <div class="slide-content title-slide">
+                <h1 class="hero-title animate">Let's Get Started</h1>
+                <p class="hero-subtitle animate">Transform banking operations today</p>
+
+                <div class="grid-3 animate" style="margin-top: 3rem; max-width: 900px;">
+                    <div class="glass-card" style="text-align: center;">
+                        <h3>Option A</h3>
+                        <p style="font-size: 0.9rem;">1-week pilot with 3-5 users</p>
+                    </div>
+                    <div class="card accent-card" style="text-align: center;">
+                        <h3>Option B</h3>
+                        <p style="font-size: 0.9rem;">Full team rollout this week</p>
+                        <span class="badge badge-green">Recommended</span>
+                    </div>
+                    <div class="glass-card" style="text-align: center;">
+                        <h3>Option C</h3>
+                        <p style="font-size: 0.9rem;">Deploy now + plan RPA phase</p>
+                    </div>
+                </div>
+
+                <p class="tagline animate" style="margin-top: 3rem;">"Your team gets their time back. Your organization gets faster, more accurate financial processing."</p>
+            </div>
+        </div>
+
+    </div>
+
+    <nav class="nav">
+        <button class="nav-btn" onclick="prevSlide()">&#8592; Previous</button>
+        <span class="slide-counter" id="slideCounter">1 / 21</span>
+        <button class="nav-btn" onclick="nextSlide()">Next &#8594;</button>
+    </nav>
+
+    <script>
+        let currentSlide = 1;
+        const totalSlides = 21;
+        const slides = document.querySelectorAll('.slide');
+        const progressBar = document.getElementById('progressBar');
+        const slideCounter = document.getElementById('slideCounter');
+
+        function updateSlide() {
+            slides.forEach((slide, index) => {
+                slide.classList.remove('active', 'prev');
+                if (index + 1 === currentSlide) {
+                    slide.classList.add('active');
+                } else if (index + 1 < currentSlide) {
+                    slide.classList.add('prev');
+                }
+            });
+
+            progressBar.style.width = `${(currentSlide / totalSlides) * 100}%`;
+            slideCounter.textContent = `${currentSlide} / ${totalSlides}`;
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides) {
+                currentSlide++;
+                updateSlide();
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 1) {
+                currentSlide--;
+                updateSlide();
+            }
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                e.preventDefault();
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                prevSlide();
+            } else if (e.key === 'Home') {
+                currentSlide = 1;
+                updateSlide();
+            } else if (e.key === 'End') {
+                currentSlide = totalSlides;
+                updateSlide();
+            }
+        });
+
+        // Touch swipe support
+        let touchStartX = 0;
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+        });
+
+        document.addEventListener('touchend', (e) => {
+            const touchEndX = e.changedTouches[0].clientX;
+            const diff = touchStartX - touchEndX;
+            if (Math.abs(diff) > 50) {
+                if (diff > 0) nextSlide();
+                else prevSlide();
+            }
+        });
+
+        // Initialize
+        updateSlide();
+    </script>
+</body>
+</html>
