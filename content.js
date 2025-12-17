@@ -889,6 +889,10 @@ let exportAllState = {
     startTime: null      // For duration tracking
 };
 
+// Keep Alive State
+let keepAliveInterval = null;
+let keepAliveActive = true; // ON by default
+
 // Check if on accounts list page (NOT details page)
 function isAccountsListPage() {
     const hash = window.location.hash;
@@ -938,9 +942,87 @@ async function injectExportAllButton() {
         li.appendChild(button);
         toolbar.appendChild(li);
         log("Export All button injected.");
+
+    }
+
+    // Keep Alive checkbox - inject into right toolbar next to Subtotal row
+    const rightToolbar = document.querySelector('ul.table-actions__group--right-ai');
+    if (rightToolbar && !document.getElementById('hsbc-bot-keep-alive-btn')) {
+        const li = document.createElement('li');
+        li.className = 'table-actions__group-item';
+
+        const fieldset = document.createElement('fieldset');
+        fieldset.className = 'table-actions__checkboxes';
+
+        const checkbox = document.createElement('input');
+        checkbox.className = 'table-actions__check';
+        checkbox.type = 'checkbox';
+        checkbox.id = 'hsbc-bot-keep-alive-btn';
+        checkbox.checked = true;
+        checkbox.onchange = toggleKeepAlive;
+
+        // Start keep alive interval on injection
+        if (!keepAliveInterval) {
+            keepAliveInterval = setInterval(() => {
+                document.dispatchEvent(new MouseEvent('mousemove', {
+                    bubbles: true,
+                    clientX: Math.random() * 100,
+                    clientY: Math.random() * 100
+                }));
+                log("Keep Alive: Ping");
+            }, 120000); // 2 minutes
+            log("Keep Alive: ON (pinging every 2 min)");
+        }
+
+        const label = document.createElement('label');
+        label.htmlFor = 'hsbc-bot-keep-alive-btn';
+        label.className = 'table-actions__check-label';
+        label.textContent = 'Keep Alive';
+
+        fieldset.appendChild(checkbox);
+        fieldset.appendChild(label);
+        li.appendChild(fieldset);
+
+        // Insert after Subtotal row (first child)
+        const subtotalItem = rightToolbar.querySelector('li');
+        if (subtotalItem && subtotalItem.nextSibling) {
+            rightToolbar.insertBefore(li, subtotalItem.nextSibling);
+        } else {
+            rightToolbar.appendChild(li);
+        }
     }
 
     isInjectingExportAll = false;
+}
+
+// Keep Alive Toggle
+function toggleKeepAlive() {
+    if (keepAliveActive) {
+        // Turn OFF
+        clearInterval(keepAliveInterval);
+        keepAliveInterval = null;
+        keepAliveActive = false;
+        log("Keep Alive: OFF");
+    } else {
+        // Turn ON - dispatch activity every 2 minutes
+        keepAliveActive = true;
+        keepAliveInterval = setInterval(() => {
+            document.dispatchEvent(new MouseEvent('mousemove', {
+                bubbles: true,
+                clientX: Math.random() * 100,
+                clientY: Math.random() * 100
+            }));
+            log("Keep Alive: Ping");
+        }, 120000); // 2 minutes
+        log("Keep Alive: ON (pinging every 2 min)");
+    }
+    updateKeepAliveButton();
+}
+
+function updateKeepAliveButton() {
+    const checkbox = document.getElementById('hsbc-bot-keep-alive-btn');
+    if (!checkbox) return;
+    checkbox.checked = keepAliveActive;
 }
 
 async function injectButton() {
