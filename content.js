@@ -1443,13 +1443,23 @@ async function processNextAccount() {
         // 5. Wait for download to complete
         await waitForButtonText('#hsbc-bot-export-btn', 'DOWNLOAD DONE', 60000);
 
-        // 6. Mark success
-        exportAllState.completed.push(account.number);
+        // 6. Mark success - store full account details
+        exportAllState.completed.push({
+            accountNumber: account.number,
+            accountTitle: account.title,
+            currency: account.currency
+        });
         logExportAll(`✓ ${account.number}`);
 
     } catch (err) {
         logExportAll(`✗ FAILED: ${account.number} - ${err.message}`);
-        exportAllState.failed.push(account.number);
+        // Store full account details with error message
+        exportAllState.failed.push({
+            accountNumber: account.number,
+            accountTitle: account.title,
+            currency: account.currency,
+            error: err.message
+        });
     }
 
     // 6. Go back to list
@@ -1528,12 +1538,145 @@ async function handlePageComplete() {
     finishExportAll();
 }
 
+// --- JSON Export Log ---
+function downloadExportLog(exportData) {
+    const jsonStr = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'HSBC_Export_Log.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    log('Export log saved: HSBC_Export_Log.json');
+}
+
+// --- Completion Modal ---
+function showCompletionModal(summary) {
+    // Remove existing modal if any
+    const existing = document.getElementById('hsbc-completion-modal');
+    if (existing) existing.remove();
+
+    const { completed, failed, cancelled, duration, dateRange } = summary;
+    const totalProcessed = completed.length + failed.length;
+
+    let statusIcon, statusColor, statusText;
+    if (cancelled) {
+        statusIcon = '⊘';
+        statusColor = '#f59e0b';
+        statusText = 'Export Cancelled';
+    } else if (failed.length > 0) {
+        statusIcon = '⚠';
+        statusColor = '#f59e0b';
+        statusText = 'Export Completed with Errors';
+    } else {
+        statusIcon = '✓';
+        statusColor = '#10b981';
+        statusText = 'Export Completed Successfully';
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'hsbc-completion-modal';
+    modal.innerHTML = `
+        <div style="position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); z-index:2147483647; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease-out;">
+            <div style="background:white; padding:32px; border-radius:16px; min-width:400px; max-width:500px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; animation:modalSlideIn 0.3s ease-out;">
+                <div style="text-align:center; margin-bottom:24px;">
+                    <div style="width:64px; height:64px; background:${statusColor}20; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:32px;">
+                        <span style="color:${statusColor};">${statusIcon}</span>
+                    </div>
+                    <h2 style="margin:0; color:#111827; font-size:20px; font-weight:700;">${statusText}</h2>
+                    <p style="margin:8px 0 0; color:#6b7280; font-size:14px;">${dateRange}</p>
+                </div>
+
+                <div style="background:#f9fafb; border-radius:12px; padding:16px; margin-bottom:24px;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr ${failed.length > 0 ? '1fr' : ''}; gap:16px; text-align:center;">
+                        <div>
+                            <div style="font-size:28px; font-weight:700; color:#10b981;">${completed.length}</div>
+                            <div style="font-size:12px; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px;">Completed</div>
+                        </div>
+                        ${failed.length > 0 ? `
+                        <div>
+                            <div style="font-size:28px; font-weight:700; color:#ef4444;">${failed.length}</div>
+                            <div style="font-size:12px; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px;">Failed</div>
+                        </div>
+                        ` : ''}
+                        <div>
+                            <div style="font-size:28px; font-weight:700; color:#3b82f6;">${duration}</div>
+                            <div style="font-size:12px; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px;">Duration</div>
+                        </div>
+                    </div>
+                </div>
+
+                ${failed.length > 0 ? `
+                <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:12px; margin-bottom:24px; max-height:120px; overflow-y:auto;">
+                    <div style="font-size:12px; font-weight:600; color:#991b1b; margin-bottom:8px;">Failed Accounts:</div>
+                    ${failed.map(f => `<div style="font-size:11px; color:#7f1d1d; padding:2px 0;">${f.accountTitle} (${f.accountNumber})</div>`).join('')}
+                </div>
+                ` : ''}
+
+                <div style="display:flex; justify-content:center; gap:12px;">
+                    <button id="completion-close-btn" style="
+                        padding:12px 32px;
+                        border:none;
+                        background:linear-gradient(135deg, #db0011 0%, #a50000 100%);
+                        color:white;
+                        border-radius:8px;
+                        cursor:pointer;
+                        font-size:14px;
+                        font-weight:600;
+                        font-family:inherit;
+                        box-shadow:0 2px 8px rgba(219,0,17,0.25);
+                        transition:all 0.2s ease;
+                    ">Close</button>
+                </div>
+
+                <p style="text-align:center; margin:16px 0 0; color:#9ca3af; font-size:11px;">
+                    Export log saved as HSBC_Export_Log.json
+                </p>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Close button handler
+    const closeBtn = document.getElementById('completion-close-btn');
+    closeBtn.onmouseover = () => {
+        closeBtn.style.background = 'linear-gradient(135deg, #ff1a2f 0%, #db0011 100%)';
+        closeBtn.style.transform = 'translateY(-1px)';
+        closeBtn.style.boxShadow = '0 4px 12px rgba(219,0,17,0.35)';
+    };
+    closeBtn.onmouseout = () => {
+        closeBtn.style.background = 'linear-gradient(135deg, #db0011 0%, #a50000 100%)';
+        closeBtn.style.transform = 'translateY(0)';
+        closeBtn.style.boxShadow = '0 2px 8px rgba(219,0,17,0.25)';
+    };
+    closeBtn.onclick = () => modal.remove();
+
+    // Close on overlay click
+    modal.firstElementChild.onclick = (e) => {
+        if (e.target === modal.firstElementChild) {
+            modal.remove();
+        }
+    };
+}
+
 // Task 7: Completion Summary
 function finishExportAll() {
     const { completed, failed, cancelled, startDate, endDate, startTime, accounts, currentIndex } = exportAllState;
 
     // Hide progress bar
     hideProgress();
+
+    // Calculate duration
+    const durationMs = Date.now() - startTime;
+    const durationSec = Math.floor(durationMs / 1000);
+    const durationMin = Math.floor(durationSec / 60);
+    const durationStr = durationMin > 0 ? `${durationMin}m ${durationSec % 60}s` : `${durationSec}s`;
 
     if (cancelled) {
         logExportAll('========== CANCELLED ==========');
@@ -1547,19 +1690,50 @@ function finishExportAll() {
 
     if (failed.length > 0) {
         console.log("[HSBC Bot] Failed accounts:", failed);
-        logExportAll(`Failed: ${failed.join(', ')}`);
+        logExportAll(`Failed: ${failed.map(f => f.accountNumber).join(', ')}`);
     }
 
-    // Save to history
-    saveExportHistory({
-        id: `export_${Date.now()}`,
+    // Build export log data
+    const exportLogData = {
+        exportId: `export_${Date.now()}`,
         timestamp: new Date().toISOString(),
-        dateRange: { from: startDate, to: endDate },
-        totalAccounts: accounts.length,
-        completed: completed.length,
+        dateRange: {
+            from: startDate,
+            to: endDate
+        },
+        summary: {
+            total: completed.length + failed.length,
+            completed: completed.length,
+            failed: failed.length,
+            cancelled: cancelled,
+            durationSeconds: durationSec
+        },
+        completed: completed,
+        failed: failed
+    };
+
+    // Download JSON log file
+    downloadExportLog(exportLogData);
+
+    // Show completion modal
+    showCompletionModal({
+        completed: completed,
         failed: failed,
         cancelled: cancelled,
-        durationMs: Date.now() - startTime
+        duration: durationStr,
+        dateRange: startDate === endDate ? startDate : `${startDate} → ${endDate}`
+    });
+
+    // Save to Chrome storage history (for popup)
+    saveExportHistory({
+        id: exportLogData.exportId,
+        timestamp: exportLogData.timestamp,
+        dateRange: { from: startDate, to: endDate },
+        totalAccounts: completed.length + failed.length,
+        completed: completed.length,
+        failed: failed.map(f => f.accountNumber),
+        cancelled: cancelled,
+        durationMs: durationMs
     });
 
     exportAllState.isRunning = false;
