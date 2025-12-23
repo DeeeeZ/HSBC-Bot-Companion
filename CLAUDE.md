@@ -8,9 +8,10 @@ Chrome extension (Manifest V3) automating HSBCnet banking portal workflows. Desi
 
 **Features:**
 - **Export All** - Batch export all accounts from list page (loops through 100+ accounts automatically)
-- **Smart File Naming** - Downloads renamed to `{Title}_{AccountNumber}_{Currency}_{DateFrom}_TO_{DateTo}.xlsx`
-- **Keep Alive** - Prevents 5-min session timeout by dispatching activity every 2 min (ON by default)
-- Auto Excel Export with Smart Wait (MutationObserver-based)
+- **Auto Export** - Single account export with Smart Wait (MutationObserver-based)
+- **Smart File Naming** - Both Export All and Auto Export rename downloads to `{Title}_{AccountNumber}_{Currency}_{DateFrom}_TO_{DateTo}.xlsx`
+- **RPA Status Polling** - `data-status` attribute (`idle`/`exporting`/`done`/`error`) for PAD integration
+- **Keep Alive** - Prevents 5-min session timeout by dispatching mouse/keyboard/scroll events every 1 min (ON by default)
 - Download-triggered auto-close of redirect windows
 
 ## Architecture
@@ -93,6 +94,9 @@ F12 DevTools on HSBCnet page → Console (filter by "[HSBC Bot]")
 | Element | Selector |
 |---------|----------|
 | Auto Export Button | `#hsbc-bot-export-btn` |
+| Account Number | `div.detail-header__number` (first token) |
+| Account Title | `h1.detail-header__favorite-title > span:first-child` |
+| Currency | `span.detail-header__name--currency` |
 | Start Date | `#filter__startDate` |
 | End Date | `#filter__endDate` |
 | Export Trigger | `#export-dropdown-trigger` |
@@ -110,11 +114,12 @@ F12 DevTools on HSBCnet page → Console (filter by "[HSBC Bot]")
 | `safeSetValue(element, value)` | Robust date input setter with event dispatch |
 | `extractAccountsFromTable()` | Parses account list with currency grouping |
 | `findRowByAccountNumber(num)` | Re-finds row after DOM refresh |
+| `extractAccountInfoFromDetailsPage()` | Extracts title/number/currency from details page header |
 | `toggleKeepAlive()` | Toggles session keep-alive interval (2 min mousemove) |
 
 ## RPA Integration
 
-**Power Automate Desktop** - use `Docs/PAD_Script.js` with Execute JavaScript action:
+**Power Automate Desktop - Trigger Export:**
 ```javascript
 function ExecuteScript() {
     var btn = document.getElementById('hsbc-bot-export-btn');
@@ -126,13 +131,16 @@ function ExecuteScript() {
 }
 ```
 
-**Other RPA tools** - set attributes before click:
+**Power Automate Desktop - Poll Status (loop until done/error):**
 ```javascript
-const btn = document.getElementById('hsbc-bot-export-btn');
-btn.setAttribute('data-start', '01/11/2025');
-btn.setAttribute('data-end', '30/11/2025');
-btn.click();
+function ExecuteScript() {
+    var btn = document.getElementById('hsbc-bot-export-btn');
+    return btn ? btn.getAttribute('data-status') : 'ERROR';
+}
+// Returns: idle, exporting, done, error
 ```
+
+**PAD Flow:** Trigger → Loop (wait 1-2s → poll → exit if `done`/`error`)
 
 ## Export All Outputs
 

@@ -35,6 +35,8 @@ A powerful Chrome extension to automate workflows on the HSBCnet banking portal.
 - **Pagination Support**: Handles multiple pages automatically
 - **Smart File Naming**: Files renamed to `{AccountTitle}_{AccountNumber}_{Currency}_{DateFrom}_TO_{DateTo}.xlsx`
 - **Error Recovery**: Failed accounts are logged and skipped, loop continues
+- **Completion Modal**: Summary popup showing success/fail counts, duration, and failed account details
+- **Export Log JSON**: Auto-downloads `HSBC_Export_Log.json` with full account details for all completed/failed exports
 
 ### 2. Export History Tracking
 **Never lose track of your exports**
@@ -55,6 +57,8 @@ A powerful Chrome extension to automate workflows on the HSBCnet banking portal.
 - **Smart Date Filling**: Prompts for Start/End dates (defaulting to current month) and auto-fills them
 - **Smart Wait**: Intelligently monitors the transaction table and clicks export as soon as data finishes loading (no fixed delays)
 - **Auto-Download**: Automatically selects the Excel option to start the download
+- **Smart File Naming**: Same naming format as Export All: `{AccountTitle}_{AccountNumber}_{Currency}_{DateFrom}_TO_{DateTo}.xlsx`
+- **RPA Status Polling**: `data-status` attribute for Power Automate Desktop integration (see RPA section below)
 
 ### 4. Zero-Latency Auto-Close
 **Instant cleanup for seamless workflow**
@@ -72,6 +76,15 @@ A powerful Chrome extension to automate workflows on the HSBCnet banking portal.
   - Green for success states
   - Red for errors
 - **Real-time Updates**: Shows exactly what the bot is doing at each step
+
+### 6. Keep Alive
+**Prevent session timeouts during long operations**
+
+- **Comprehensive Activity Simulation**: Dispatches mouse, keyboard, and scroll events every 1 minute to prevent HSBCnet's 5-minute session timeout
+- **Multi-Target Events**: Events dispatched on `document`, `window`, and `document.body` for maximum compatibility
+- **Toggle Control**: Checkbox on Accounts List page to enable/disable
+- **ON by Default**: Automatically enabled when extension loads
+- **Visual Indicator**: Checkbox shows current state
 
 ---
 
@@ -148,14 +161,27 @@ C G R FZE_021-894472-001_AED_06-12-2025_TO_06-12-2025.xlsx
 
 Perfect for automation workflows with Power Automate Desktop, UiPath, Selenium, and more.
 
-### Button Selector
+### Button Selectors
 ```
-#hsbc-bot-export-btn
+#hsbc-bot-export-btn      (Auto Export - Account Details page)
+#hsbc-bot-export-all-btn  (Export All - Accounts List page)
+#hsbc-bot-keep-alive-btn  (Keep Alive checkbox - Accounts List page)
 ```
+
+### Status Polling (data-status attribute)
+
+The Auto Export button exposes a `data-status` attribute for RPA tools to poll export completion:
+
+| Status | Meaning |
+|--------|---------|
+| `idle` | Ready for export |
+| `exporting` | Export in progress |
+| `done` | Download complete |
+| `error` | Export failed |
 
 ### Power Automate Desktop
-Use `PAD_Script.js` with **Execute JavaScript** action:
 
+**Step 1: Trigger Export** (Execute JavaScript action)
 ```javascript
 function ExecuteScript() {
     var btn = document.getElementById('hsbc-bot-export-btn');
@@ -167,6 +193,17 @@ function ExecuteScript() {
 }
 ```
 
+**Step 2: Poll for Completion** (Loop until `done` or `error`)
+```javascript
+function ExecuteScript() {
+    var btn = document.getElementById('hsbc-bot-export-btn');
+    return btn ? btn.getAttribute('data-status') : 'ERROR';
+}
+// Returns: idle, exporting, done, error
+```
+
+**PAD Flow:** Trigger → Loop (wait 1-2s → poll → exit if `done`/`error`)
+
 ### Other RPA Tools (UiPath, Selenium)
 
 ```javascript
@@ -174,6 +211,10 @@ const btn = document.getElementById('hsbc-bot-export-btn');
 btn.setAttribute('data-start', '01/11/2025');
 btn.setAttribute('data-end', '30/11/2025');
 btn.click();
+
+// Poll for completion
+const status = btn.getAttribute('data-status');
+// status: 'idle' | 'exporting' | 'done' | 'error'
 ```
 
 **Date Format**: `dd/mm/yyyy`

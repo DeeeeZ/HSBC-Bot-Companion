@@ -464,6 +464,27 @@ function findRowByAccountNumber(accountNumber) {
     return null;
 }
 
+// Extract account info from details page header (for Auto Export file naming)
+function extractAccountInfoFromDetailsPage() {
+    try {
+        const numberEl = document.querySelector('div.detail-header__number');
+        const titleEl = document.querySelector('h1.detail-header__favorite-title > span:first-child');
+        const currencyEl = document.querySelector('span.detail-header__name--currency');
+
+        if (!numberEl || !titleEl || !currencyEl) return null;
+
+        // Extract account number (first token: "035-315001-001 AE Current account" → "035-315001-001")
+        const number = numberEl.textContent.trim().split(/\s+/)[0];
+        const title = titleEl.textContent.trim();
+        const currency = currencyEl.textContent.trim();
+
+        return { number, title, currency };
+    } catch (e) {
+        console.log('[HSBC Bot] Failed to extract account info:', e);
+        return null;
+    }
+}
+
 // --- Export History ---
 const HISTORY_KEY = 'hsbc_export_history';
 
@@ -964,14 +985,25 @@ async function injectExportAllButton() {
         // Start keep alive interval on injection
         if (!keepAliveInterval) {
             keepAliveInterval = setInterval(() => {
-                document.dispatchEvent(new MouseEvent('mousemove', {
-                    bubbles: true,
-                    clientX: Math.random() * 100,
-                    clientY: Math.random() * 100
-                }));
+                // Simulate comprehensive user activity
+                const targets = [document, window, document.body];
+                targets.forEach(target => {
+                    if (target) {
+                        target.dispatchEvent(new MouseEvent('mousemove', {
+                            bubbles: true,
+                            clientX: Math.random() * window.innerWidth,
+                            clientY: Math.random() * window.innerHeight
+                        }));
+                    }
+                });
+
+                // Also dispatch keyboard and scroll events
+                document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Shift' }));
+                window.dispatchEvent(new Event('scroll', { bubbles: true }));
+
                 log("Keep Alive: Ping");
-            }, 120000); // 2 minutes
-            log("Keep Alive: ON (pinging every 2 min)");
+            }, 60000); // 1 minute
+            log("Keep Alive: ON (pinging every 1 min)");
         }
 
         const label = document.createElement('label');
@@ -1004,17 +1036,28 @@ function toggleKeepAlive() {
         keepAliveActive = false;
         log("Keep Alive: OFF");
     } else {
-        // Turn ON - dispatch activity every 2 minutes
+        // Turn ON - dispatch activity every 1 minute
         keepAliveActive = true;
         keepAliveInterval = setInterval(() => {
-            document.dispatchEvent(new MouseEvent('mousemove', {
-                bubbles: true,
-                clientX: Math.random() * 100,
-                clientY: Math.random() * 100
-            }));
+            // Simulate comprehensive user activity
+            const targets = [document, window, document.body];
+            targets.forEach(target => {
+                if (target) {
+                    target.dispatchEvent(new MouseEvent('mousemove', {
+                        bubbles: true,
+                        clientX: Math.random() * window.innerWidth,
+                        clientY: Math.random() * window.innerHeight
+                    }));
+                }
+            });
+
+            // Also dispatch keyboard and scroll events
+            document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Shift' }));
+            window.dispatchEvent(new Event('scroll', { bubbles: true }));
+
             log("Keep Alive: Ping");
-        }, 120000); // 2 minutes
-        log("Keep Alive: ON (pinging every 2 min)");
+        }, 60000); // 1 minute
+        log("Keep Alive: ON (pinging every 1 min)");
     }
     updateKeepAliveButton();
 }
@@ -1042,6 +1085,7 @@ async function injectButton() {
         button.id = 'hsbc-bot-export-btn';
         button.className = 'user-action__button';
         button.textContent = 'Auto Export';
+        button.setAttribute('data-status', 'idle');
         button.style.cssText = `
             background: transparent;
             color: #333;
@@ -1169,12 +1213,32 @@ async function handleExportFlow(e) {
             }
         });
 
+        // 2.5. SEND DOWNLOAD CONTEXT (for file renaming)
+        const accountInfo = extractAccountInfoFromDetailsPage();
+        if (accountInfo) {
+            chrome.runtime.sendMessage({
+                action: "set_download_context",
+                accountTitle: accountInfo.title,
+                accountNumber: accountInfo.number,
+                currency: accountInfo.currency,
+                dateFrom: startDateInput.replace(/\//g, '-'),
+                dateTo: endDateInput.replace(/\//g, '-')
+            });
+            log(`Context set: ${accountInfo.title} (${accountInfo.number})`);
+        } else {
+            log("Warning: Could not extract account info for file naming");
+        }
+
         // 3. CLICK EXPORT
         const trigger = document.getElementById('export-dropdown-trigger');
         if (!trigger) {
             logError("Export button NOT found.");
             return;
         }
+
+        // Set status for PAD polling
+        const exportBtn = document.getElementById('hsbc-bot-export-btn');
+        if (exportBtn) exportBtn.setAttribute('data-status', 'exporting');
 
         log("Clicking Export...");
         trigger.click();
@@ -1206,6 +1270,8 @@ async function handleExportFlow(e) {
 
     } catch (err) {
         logError("CRITICAL", err);
+        const errorBtn = document.getElementById('hsbc-bot-export-btn');
+        if (errorBtn) errorBtn.setAttribute('data-status', 'error');
     }
 }
 
@@ -1515,6 +1581,7 @@ async function processNextAccount() {
         // 5. Reset button state and trigger export
         const btn = document.getElementById('hsbc-bot-export-btn');
         btn.textContent = 'Auto Export';
+        btn.setAttribute('data-status', 'idle');
         btn.style.backgroundColor = '';
         btn.style.color = '';
         btn.style.borderColor = '';
@@ -1853,6 +1920,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         log("=== DOWNLOAD CONFIRMED ===");
         btn.textContent = 'DOWNLOAD DONE';
+        btn.setAttribute('data-status', 'done');
         btn.style.backgroundColor = '#28a745';
         btn.style.color = '#fff';
         btn.style.borderColor = '#28a745';
