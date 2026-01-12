@@ -4,34 +4,85 @@ console.log("HSBC Bot Background Service Worker Loaded");
 
 // --- Download Context for File Renaming ---
 let pendingDownloadContext = null;
+let pendingJsonDownload = null; // For JSON log file
 
 // Listen for messages
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Manual close request
     if (message.action === "close_tab" && sender.tab && sender.tab.id) {
         console.log(`Received Manual Close Request for Tab ID: ${sender.tab.id}`);
-        chrome.tabs.remove(sender.tab.id);
+        chrome.tabs.remove(sender.tab.id).catch(() => {});
     }
 
     // Set download context for filename (from content.js before export)
     if (message.action === "set_download_context") {
+        const contextTimestamp = Date.now();
         pendingDownloadContext = {
             title: message.accountTitle,
             number: message.accountNumber,
             currency: message.currency || 'UNKNOWN',
             dateFrom: message.dateFrom,
             dateTo: message.dateTo,
-            timestamp: Date.now()
+            timestamp: contextTimestamp
         };
         console.log("[HSBC Bot] Download context set:", pendingDownloadContext);
 
-        // Auto-clear after 60s (safety)
+        // Auto-clear after 60s (safety) - use closure to capture timestamp
         setTimeout(() => {
-            if (pendingDownloadContext && pendingDownloadContext.timestamp === message.timestamp) {
+            if (pendingDownloadContext && pendingDownloadContext.timestamp === contextTimestamp) {
                 pendingDownloadContext = null;
                 console.log("[HSBC Bot] Download context expired");
             }
         }, 60000);
+    }
+
+    // Download JSON log to HSBC_Exports subfolder
+    if (message.action === "download_json_log") {
+        try {
+            // Set context for onDeterminingFilename to use
+            pendingJsonDownload = {
+                filename: message.filename,
+                timestamp: Date.now()
+            };
+
+            // Convert string to base64 safely (handles Unicode and large files)
+            const utf8Bytes = new TextEncoder().encode(message.content);
+            let binary = '';
+            for (let i = 0; i < utf8Bytes.length; i++) {
+                binary += String.fromCharCode(utf8Bytes[i]);
+            }
+            const base64 = btoa(binary);
+            const dataUrl = `data:application/json;base64,${base64}`;
+
+            console.log("[HSBC Bot] Starting JSON download, context set");
+
+            chrome.downloads.download({
+                url: dataUrl,
+                saveAs: false
+            }, (downloadId) => {
+                if (chrome.runtime.lastError) {
+                    console.log("[HSBC Bot] JSON download error:", chrome.runtime.lastError);
+                    pendingJsonDownload = null;
+                    sendResponse({ success: false, error: chrome.runtime.lastError.message });
+                } else {
+                    console.log("[HSBC Bot] JSON download started, id:", downloadId);
+                    sendResponse({ success: true });
+                }
+            });
+
+            // Auto-clear context after 10s (safety)
+            setTimeout(() => {
+                if (pendingJsonDownload && pendingJsonDownload.timestamp === message.timestamp) {
+                    pendingJsonDownload = null;
+                }
+            }, 10000);
+        } catch (err) {
+            console.log("[HSBC Bot] JSON download exception:", err);
+            pendingJsonDownload = null;
+            sendResponse({ success: false, error: err.message });
+        }
+
+        return true; // Keep channel open for async response
     }
 });
 
@@ -39,7 +90,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
     console.log("[HSBC Bot] onDeterminingFilename:", downloadItem.filename);
 
-    // Check if we have context and it's an xlsx file from HSBC
+    // Get today's date for folder organization (export run date)
+    const today = new Date();
+    const dateFolder = today.toISOString().split('T')[0]; // "YYYY-MM-DD"
+
+    // Handle JSON log file download
+    if (pendingJsonDownload && downloadItem.filename.toLowerCase().endsWith('.json')) {
+        const fullPath = `HSBC_Exports/${dateFolder}/${pendingJsonDownload.filename}`;
+        console.log("[HSBC Bot] Saving JSON to:", fullPath);
+        suggest({ filename: fullPath });
+        pendingJsonDownload = null;
+        return;
+    }
+
+    // Handle Excel file download (from HSBC export)
     if (pendingDownloadContext && downloadItem.filename.toLowerCase().endsWith('.xlsx')) {
         const ctx = pendingDownloadContext;
 
@@ -49,15 +113,19 @@ chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
         // Build filename: Title_AccountNumber_Currency_DateFrom_TO_DateTo.xlsx
         const newFilename = `${safeTitle}_${ctx.number}_${ctx.currency}_${ctx.dateFrom}_TO_${ctx.dateTo}.xlsx`;
 
-        console.log("[HSBC Bot] Renaming to:", newFilename);
-        suggest({ filename: newFilename });
+        // Build full path with subfolder: HSBC_Exports/YYYY-MM-DD/filename.xlsx
+        const fullPath = `HSBC_Exports/${dateFolder}/${newFilename}`;
+
+        console.log("[HSBC Bot] Saving Excel to:", fullPath);
+        suggest({ filename: fullPath });
 
         // Clear context after use
         pendingDownloadContext = null;
-    } else {
-        // No context or not xlsx - use default filename
-        suggest();
+        return;
     }
+
+    // No context - use default filename
+    suggest();
 });
 
 // Listen for new downloads
@@ -82,32 +150,25 @@ chrome.downloads.onCreated.addListener((downloadItem) => {
     // without some tricks if strictly background. 
     // But we know we are looking for the active tab that is on the redirect page.
     
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs && tabs.length > 0) {
-            const activeTab = tabs[0];
-            if (activeTab.url && activeTab.url.includes("GIBRfdRedirect")) {
-                console.log(`Closing tab ${activeTab.id} due to download start and matching URL.`);
-                
-                // Allow a tiny buffer (500ms) to ensure browser registers the download handoff
-                setTimeout(() => {
-                    chrome.tabs.remove(activeTab.id);
-                }, 500); 
-            }
-        }
-    });
-
-    // Strategy 2: If we want to be more specific, we can search all tabs for the redirect URL
+    // Close all redirect tabs (single consolidated strategy)
     chrome.tabs.query({ url: "*://*.hsbcnet.com/*GIBRfdRedirect*" }, (tabs) => {
+        if (!tabs || tabs.length === 0) return;
+
+        // Track which tabs we're closing to avoid duplicates
+        const closedTabs = new Set();
+
         tabs.forEach(tab => {
-            console.log("Found Redirect Tab:", tab.url);
-            // Close it
+            if (closedTabs.has(tab.id)) return;
+            closedTabs.add(tab.id);
+
+            console.log("Closing redirect tab:", tab.id, tab.url);
             setTimeout(() => {
-                 chrome.tabs.remove(tab.id);
-            }, 500);
+                chrome.tabs.remove(tab.id).catch(() => {});
+            }, 300);
         });
     });
 
-    // Notify ALL hsbcnet tabs that download started (content script checks if button exists)
+    // Notify ALL hsbcnet tabs that download started (include context for verification)
     chrome.tabs.query({ url: "*://*.hsbcnet.com/*" }, (tabs) => {
         console.log("Found HSBC tabs:", tabs.length);
         tabs.forEach(tab => {
@@ -115,7 +176,13 @@ chrome.downloads.onCreated.addListener((downloadItem) => {
             if (tab.url && tab.url.includes("GIBRfdRedirect")) return;
 
             console.log("Notifying tab:", tab.id, tab.url);
-            chrome.tabs.sendMessage(tab.id, { action: "download_started" }).catch(err => {
+            chrome.tabs.sendMessage(tab.id, {
+                action: "download_started",
+                context: pendingDownloadContext ? {
+                    number: pendingDownloadContext.number,
+                    title: pendingDownloadContext.title
+                } : null
+            }).catch(err => {
                 console.log("Tab not listening:", tab.id);
             });
         });

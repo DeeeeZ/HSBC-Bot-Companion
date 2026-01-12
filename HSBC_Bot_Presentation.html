@@ -1,0 +1,2241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HSBC Bot Companion</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --void: #050505;
+            --void-light: #0a0a0f;
+            --void-lighter: #12121a;
+
+            --cyan: #00f0ff;
+            --cyan-glow: rgba(0, 240, 255, 0.15);
+            --electric: #0066ff;
+            --electric-glow: rgba(0, 102, 255, 0.2);
+
+            --gold: #ffd700;
+            --gold-muted: #c9a227;
+            --gold-glow: rgba(255, 215, 0, 0.1);
+
+            --success: #00ff88;
+            --warning: #ff9500;
+            --danger: #ff3366;
+
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --text-muted: rgba(255, 255, 255, 0.4);
+
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-highlight: rgba(255, 255, 255, 0.12);
+
+            --font-display: 'Outfit', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+
+            --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-smooth: 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            --transition-bounce: 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: var(--font-display);
+            background: var(--void);
+            color: var(--text-primary);
+            cursor: none;
+        }
+
+        /* ==================== LOADING SCREEN ==================== */
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--void);
+            z-index: 100000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.8s ease, visibility 0.8s ease;
+        }
+
+        .loader.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .loader-logo {
+            width: 100px;
+            height: 100px;
+            border: 2px solid var(--cyan);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: loader-pulse 2s ease-in-out infinite;
+            margin-bottom: 2rem;
+        }
+
+        .loader-logo svg {
+            width: 50px;
+            height: 50px;
+            stroke: var(--cyan);
+            fill: none;
+            stroke-width: 1.5;
+        }
+
+        @keyframes loader-pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 var(--cyan-glow); }
+            50% { transform: scale(1.05); box-shadow: 0 0 60px 20px var(--cyan-glow); }
+        }
+
+        .loader-bar {
+            width: 200px;
+            height: 2px;
+            background: var(--void-lighter);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .loader-progress {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--cyan), var(--electric));
+            transition: width 0.3s ease;
+        }
+
+        .loader-text {
+            margin-top: 1.5rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.3em;
+            font-family: var(--font-mono);
+        }
+
+        /* ==================== NOISE OVERLAY ==================== */
+        .noise {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9998;
+            opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+        }
+
+        /* ==================== CLICK PARTICLES ==================== */
+        .click-particle {
+            position: fixed;
+            pointer-events: none;
+            z-index: 99999;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--cyan);
+            box-shadow: 0 0 10px var(--cyan);
+        }
+
+        /* ==================== CUSTOM CURSOR ==================== */
+        .cursor {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--cyan) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 10000;
+            mix-blend-mode: screen;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s, opacity 0.3s;
+            opacity: 0.8;
+        }
+
+        .cursor-follower {
+            position: fixed;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+            transition: transform 0.15s ease-out, width 0.3s, height 0.3s, border-color 0.3s;
+        }
+
+        .cursor.active {
+            width: 60px;
+            height: 60px;
+            opacity: 0.5;
+        }
+
+        .cursor-follower.active {
+            width: 80px;
+            height: 80px;
+            border-color: var(--gold);
+        }
+
+        /* Cursor trail */
+        .cursor-trail {
+            position: fixed;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--cyan);
+            pointer-events: none;
+            z-index: 9998;
+            opacity: 0;
+            transform: translate(-50%, -50%);
+        }
+
+        /* ==================== CANVAS BACKGROUND ==================== */
+        #bgCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        /* ==================== PROGRESS BAR ==================== */
+        .progress-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--void-lighter);
+            z-index: 1000;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--cyan), var(--electric), var(--cyan));
+            background-size: 200% 100%;
+            animation: shimmer 2s linear infinite;
+            transition: width var(--transition-smooth);
+            box-shadow: 0 0 20px var(--cyan), 0 0 40px var(--electric);
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* ==================== PRESENTATION ==================== */
+        .presentation {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* ==================== SLIDES ==================== */
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 80px 120px;
+            opacity: 0;
+            pointer-events: none;
+            clip-path: circle(0% at 50% 50%);
+            transition: opacity 0.8s ease, clip-path 1s cubic-bezier(0.77, 0, 0.175, 1);
+        }
+
+        .slide.active {
+            opacity: 1;
+            pointer-events: all;
+            clip-path: circle(150% at 50% 50%);
+        }
+
+        .slide.exit-left {
+            clip-path: inset(0 100% 0 0);
+        }
+
+        .slide.exit-right {
+            clip-path: inset(0 0 0 100%);
+        }
+
+        .slide-content {
+            max-width: 1400px;
+            width: 100%;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* ==================== TYPOGRAPHY ==================== */
+        .gradient-text {
+            background: linear-gradient(135deg, var(--cyan) 0%, var(--electric) 50%, var(--gold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Text scramble targets */
+        .scramble-text {
+            display: inline-block;
+        }
+
+        .hero-title {
+            font-size: clamp(4rem, 12vw, 8rem);
+            font-weight: 900;
+            line-height: 0.95;
+            letter-spacing: -0.03em;
+            margin-bottom: 1.5rem;
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            font-weight: 300;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            font-weight: 800;
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+
+        h2 {
+            font-size: clamp(1.5rem, 3vw, 2.25rem);
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--text-secondary);
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        p {
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 0.5rem 1.25rem;
+            background: var(--cyan-glow);
+            border: 1px solid var(--cyan);
+            border-radius: 100px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--cyan);
+            margin-bottom: 1.5rem;
+        }
+
+        .tag.gold {
+            background: var(--gold-glow);
+            border-color: var(--gold);
+            color: var(--gold);
+        }
+
+        /* ==================== GLASS CARDS (with 3D tilt) ==================== */
+        .glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 2.5rem;
+            position: relative;
+            overflow: hidden;
+            transform-style: preserve-3d;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .glass::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--glass-highlight), transparent);
+        }
+
+        /* Shine effect on tilt */
+        .glass::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.03) 45%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.03) 55%, transparent 60%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .glass:hover::after {
+            opacity: 1;
+        }
+
+        .glass.accent {
+            border-color: rgba(0, 240, 255, 0.2);
+            box-shadow: 0 0 60px var(--cyan-glow), inset 0 0 60px var(--cyan-glow);
+        }
+
+        .glass.gold-accent {
+            border-color: rgba(255, 215, 0, 0.2);
+            box-shadow: 0 0 60px var(--gold-glow), inset 0 0 60px var(--gold-glow);
+        }
+
+        /* ==================== GRID SYSTEM ==================== */
+        .grid {
+            display: grid;
+            gap: 2rem;
+        }
+
+        .grid-2 { grid-template-columns: repeat(2, 1fr); }
+        .grid-3 { grid-template-columns: repeat(3, 1fr); }
+        .grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+        @media (max-width: 1024px) {
+            .slide { padding: 60px 40px; }
+            .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+        }
+
+        /* ==================== METRICS ==================== */
+        .metric {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .metric-value {
+            font-size: clamp(4rem, 10vw, 7rem);
+            font-weight: 900;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value.cyan { color: var(--cyan); text-shadow: 0 0 40px var(--cyan-glow); }
+        .metric-value.gold { color: var(--gold); text-shadow: 0 0 40px var(--gold-glow); }
+        .metric-value.success { color: var(--success); }
+        .metric-value.danger { color: var(--danger); }
+
+        .metric-label {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            font-weight: 500;
+        }
+
+        /* ==================== FEATURE CARDS ==================== */
+        .feature-card {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .feature-icon {
+            width: 64px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--cyan-glow), var(--electric-glow));
+            border: 1px solid var(--cyan);
+            border-radius: 16px;
+            font-size: 1.5rem;
+        }
+
+        .feature-icon svg {
+            width: 32px;
+            height: 32px;
+            stroke: var(--cyan);
+            fill: none;
+            stroke-width: 1.5;
+        }
+
+        /* ==================== CODE BLOCK ==================== */
+        .code-block {
+            background: var(--void);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            line-height: 1.8;
+            overflow-x: auto;
+        }
+
+        .code-block .keyword { color: var(--danger); }
+        .code-block .string { color: var(--success); }
+        .code-block .function { color: var(--gold); }
+        .code-block .comment { color: var(--text-muted); }
+        .code-block .number { color: var(--cyan); }
+
+        /* ==================== COMPARISON ==================== */
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 3rem;
+            align-items: center;
+        }
+
+        .comparison-arrow {
+            font-size: 3rem;
+            color: var(--success);
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+
+        /* ==================== LISTS ==================== */
+        .feature-list {
+            list-style: none;
+        }
+
+        .feature-list li {
+            position: relative;
+            padding-left: 2rem;
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .feature-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0.5rem;
+            width: 8px;
+            height: 8px;
+            background: var(--cyan);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--cyan);
+        }
+
+        /* ==================== NAVIGATION (with magnetic effect) ==================== */
+        .nav {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            z-index: 100;
+            padding: 0.75rem 1.5rem;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 100px;
+        }
+
+        .nav-btn {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 50%;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-size: 1.25rem;
+            position: relative;
+        }
+
+        .nav-btn:hover {
+            background: var(--glass-highlight);
+            border-color: var(--cyan);
+            color: var(--cyan);
+        }
+
+        .nav-btn:active {
+            transform: scale(0.95);
+        }
+
+        .slide-indicator {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .slide-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--glass-border);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .slide-dot.active {
+            background: var(--cyan);
+            box-shadow: 0 0 10px var(--cyan);
+            transform: scale(1.3);
+        }
+
+        .slide-dot:hover {
+            background: var(--text-muted);
+            transform: scale(1.2);
+        }
+
+        .slide-counter {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            min-width: 60px;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ==================== ANIMATIONS ==================== */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        .slide.active .fade-in {
+            animation: fadeInUp 0.8s var(--transition-smooth) forwards;
+        }
+
+        .slide.active .fade-in:nth-child(1) { animation-delay: 0.1s; }
+        .slide.active .fade-in:nth-child(2) { animation-delay: 0.2s; }
+        .slide.active .fade-in:nth-child(3) { animation-delay: 0.3s; }
+        .slide.active .fade-in:nth-child(4) { animation-delay: 0.4s; }
+        .slide.active .fade-in:nth-child(5) { animation-delay: 0.5s; }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Staggered grid reveal */
+        .slide.active .grid > * {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: staggerReveal 0.6s ease forwards;
+        }
+
+        .slide.active .grid > *:nth-child(1) { animation-delay: 0.3s; }
+        .slide.active .grid > *:nth-child(2) { animation-delay: 0.4s; }
+        .slide.active .grid > *:nth-child(3) { animation-delay: 0.5s; }
+        .slide.active .grid > *:nth-child(4) { animation-delay: 0.6s; }
+
+        @keyframes staggerReveal {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ==================== LAYOUTS ==================== */
+        .center {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+        }
+
+        @media (max-width: 1024px) {
+            .split { grid-template-columns: 1fr; gap: 2rem; }
+            .comparison { grid-template-columns: 1fr; }
+            .comparison-arrow { transform: rotate(90deg); }
+        }
+
+        /* ==================== TIMELINE ==================== */
+        .timeline {
+            position: relative;
+            padding-left: 3rem;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(180deg, var(--cyan), var(--electric), transparent);
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 2rem;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -3rem;
+            top: 0.25rem;
+            width: 16px;
+            height: 16px;
+            background: var(--void);
+            border: 2px solid var(--cyan);
+            border-radius: 50%;
+            box-shadow: 0 0 20px var(--cyan-glow);
+        }
+
+        .timeline-item h3 {
+            color: var(--cyan);
+            margin-bottom: 0.5rem;
+        }
+
+        /* ==================== TABLE ==================== */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 1.25rem 1.5rem;
+            text-align: left;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .data-table th {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+        }
+
+        .data-table td {
+            color: var(--text-secondary);
+        }
+
+        .data-table tr:hover td {
+            background: var(--glass-bg);
+        }
+
+        .data-table .highlight-row {
+            background: var(--cyan-glow);
+        }
+
+        .data-table .highlight-row td {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        /* ==================== LOGO ==================== */
+        .logo-icon {
+            width: 120px;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--cyan-glow), var(--electric-glow));
+            border: 2px solid var(--cyan);
+            border-radius: 32px;
+            margin-bottom: 2rem;
+            box-shadow: 0 0 80px var(--cyan-glow);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .logo-icon svg {
+            width: 64px;
+            height: 64px;
+            stroke: var(--cyan);
+            fill: none;
+            stroke-width: 1.5;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* ==================== KEYBOARD HINTS ==================== */
+        .keyboard-hint {
+            position: fixed;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 0.5rem;
+            opacity: 0.3;
+            transition: opacity var(--transition-fast);
+            z-index: 99;
+        }
+
+        .keyboard-hint:hover {
+            opacity: 0.6;
+        }
+
+        .key {
+            padding: 0.25rem 0.5rem;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-family: var(--font-mono);
+            color: var(--text-muted);
+        }
+
+        /* ==================== MISC ==================== */
+        .tagline {
+            font-size: 1.25rem;
+            font-style: italic;
+            color: var(--text-muted);
+            margin-top: 2rem;
+            max-width: 600px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.75rem;
+            border-radius: 100px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge.success {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid var(--success);
+            color: var(--success);
+        }
+
+        .badge.cyan {
+            background: var(--cyan-glow);
+            border: 1px solid var(--cyan);
+            color: var(--cyan);
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.5); }
+            50% { opacity: 0.8; box-shadow: 0 0 0 10px rgba(0, 255, 136, 0); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loader" id="loader">
+        <div class="loader-logo">
+            <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        </div>
+        <div class="loader-bar">
+            <div class="loader-progress" id="loaderProgress"></div>
+        </div>
+        <div class="loader-text" id="loaderText">Initializing</div>
+    </div>
+
+    <!-- Noise Overlay -->
+    <div class="noise"></div>
+
+    <!-- Custom Cursor -->
+    <div class="cursor" id="cursor"></div>
+    <div class="cursor-follower" id="cursorFollower"></div>
+
+    <!-- Canvas Background -->
+    <canvas id="bgCanvas"></canvas>
+
+    <!-- Progress Bar -->
+    <div class="progress-container">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <!-- Presentation -->
+    <div class="presentation" id="presentation">
+
+        <!-- Slide 1: Title -->
+        <section class="slide active" data-slide="1">
+            <div class="slide-content center">
+                <div class="logo-icon fade-in">
+                    <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                </div>
+                <h1 class="hero-title gradient-text fade-in"><span class="scramble-text" data-text="HSBC Bot">HSBC Bot</span><br><span class="scramble-text" data-text="Companion">Companion</span></h1>
+                <p class="hero-subtitle fade-in">Automating Bank Statement Exports</p>
+                <p class="hero-subtitle fade-in" style="color: var(--cyan);">From Hours to Minutes</p>
+                <p class="tagline fade-in">"Intelligent banking workflow automation for modern finance teams"</p>
+            </div>
+        </section>
+
+        <!-- Slide 2: The Problem -->
+        <section class="slide" data-slide="2">
+            <div class="slide-content">
+                <span class="tag fade-in">The Challenge</span>
+                <h1 class="gradient-text fade-in"><span class="scramble-text" data-text="Manual Exports">Manual Exports</span></h1>
+                <h2 class="fade-in">A Hidden Time Drain</h2>
+
+                <div class="grid grid-2 fade-in" style="margin-top: 3rem;">
+                    <div class="glass accent">
+                        <h3 style="color: var(--danger); margin-bottom: 1.5rem;">Pain Points</h3>
+                        <ul class="feature-list">
+                            <li>Exporting <strong style="color: var(--cyan);">100+ accounts</strong> individually</li>
+                            <li>Manually typing date ranges each time</li>
+                            <li>5-minute session timeouts interrupt work</li>
+                            <li>Generic filenames: export1.xlsx, export2.xlsx...</li>
+                            <li>High error rates from manual oversight</li>
+                        </ul>
+                    </div>
+                    <div class="glass">
+                        <h3 style="color: var(--warning); margin-bottom: 1.5rem;">Business Impact</h3>
+                        <ul class="feature-list">
+                            <li><strong style="color: var(--danger);">4-6 hours</strong> per export cycle</li>
+                            <li>Staff stuck on repetitive clicking</li>
+                            <li>Error-prone requiring re-exports</li>
+                            <li>Zero time for high-value analysis</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 3: The Solution -->
+        <section class="slide" data-slide="3">
+            <div class="slide-content center">
+                <span class="tag gold fade-in">The Solution</span>
+                <h1 class="gradient-text fade-in"><span class="scramble-text" data-text="Meet HSBC Bot">Meet HSBC Bot</span></h1>
+                <h2 class="fade-in">Chrome Extension (Manifest V3)</h2>
+
+                <div class="grid grid-3 fade-in" style="margin-top: 3rem; width: 100%;">
+                    <div class="glass feature-card">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                        </div>
+                        <h3>Lightweight</h3>
+                        <p>Zero setup. Install and go. No infrastructure changes.</p>
+                    </div>
+                    <div class="glass accent feature-card">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09zM12 15l-3-3a22 22 0 012-3.95A12.88 12.88 0 0122 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 01-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+                        </div>
+                        <h3>Powerful</h3>
+                        <p>Batch exports, smart naming, error recovery, RPA-ready.</p>
+                    </div>
+                    <div class="glass feature-card">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                        </div>
+                        <h3>Secure</h3>
+                        <p>No cloud. No credentials stored. 100% local processing.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 4: Export All Feature -->
+        <section class="slide" data-slide="4">
+            <div class="slide-content">
+                <span class="tag fade-in">Feature #1</span>
+                <h1 class="gradient-text fade-in"><span class="scramble-text" data-text="Export All Accounts">Export All Accounts</span></h1>
+                <h2 class="fade-in">Batch process 100+ accounts in minutes</h2>
+
+                <div class="split fade-in" style="margin-top: 2rem;">
+                    <div>
+                        <ul class="feature-list">
+                            <li>Single button click to export all</li>
+                            <li>Select specific accounts via checkboxes</li>
+                            <li>Date presets: Yesterday, Last 7 Days, Last Month</li>
+                            <li>Automatic pagination handling</li>
+                            <li>Real-time progress bar</li>
+                            <li>Failed accounts logged, loop continues</li>
+                            <li>Cancel anytime</li>
+                        </ul>
+                    </div>
+                    <div class="glass accent" style="text-align: center;">
+                        <div class="metric">
+                            <div class="metric-value cyan" data-counter="85" data-suffix="%">0%</div>
+                            <div class="metric-label">Time Reduction</div>
+                        </div>
+                        <p style="margin-top: 1rem; font-size: 1.25rem;">
+                            <span style="color: var(--danger);">90-120 min</span>
+                            <span style="color: var(--text-muted);"> → </span>
+                            <span style="color: var(--success);">15-25 min</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 5: Smart File Naming -->
+        <section class="slide" data-slide="5">
+            <div class="slide-content">
+                <span class="tag fade-in">Feature #2</span>
+                <h1 class="gradient-text fade-in"><span class="scramble-text" data-text="Smart File Naming">Smart File Naming</span></h1>
+                <h2 class="fade-in">Perfect organization, zero effort</h2>
+
+                <div class="comparison fade-in" style="margin-top: 3rem;">
+                    <div class="glass">
+                        <h3 style="color: var(--warning); margin-bottom: 1rem;">Before</h3>
+                        <div class="code-block">
+<span class="comment">// Chaos</span>
+export (1).xlsx
+export (2).xlsx
+export (3).xlsx
+...
+                        </div>
+                    </div>
+                    <div class="comparison-arrow">→</div>
+                    <div class="glass accent">
+                        <h3 style="color: var(--success); margin-bottom: 1rem;">After</h3>
+                        <div class="code-block">
+<span class="comment">// Self-documenting</span>
+<span class="string">Dubai_Ops_GSA123_AED_01-Nov_TO_30-Nov.xlsx</span>
+<span class="string">Retail_GSB654_USD_01-Nov_TO_30-Nov.xlsx</span>
+<span class="string">Trading_GCA987_AED_01-Nov_TO_30-Nov.xlsx</span>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="fade-in" style="text-align: center; margin-top: 2rem; color: var(--text-muted);">
+                    Files self-identify their content. No manual renaming. Audit-ready.
+                </p>
+            </div>
+        </section>
+
+        <!-- Slide 6: Keep Alive -->
+        <section class="slide" data-slide="6">
+            <div class="slide-content">
+                <span class="tag fade-in">Feature #3</span>
+                <h1 class="gradient-text fade-in"><span class="scramble-text" data-text="Keep Alive">Keep Alive</span></h1>
+                <h2 class="fade-in">Never lose your session again</h2>
+
+                <div class="grid grid-2 fade-in" style="margin-top: 3rem;">
+                    <div class="glass">
+                        <h3 style="color: var(--warning);">The Problem</h3>
+                        <p style="margin: 1rem 0;">HSBCnet enforces <span style="color: var(--danger); font-weight: 600;">5-minute timeout</span></p>
+                        <p>Long exports trigger logout mid-operation</p>
+                        <p>Session interruption = wasted time + restart</p>
+                    </div>
+                    <div class="glass accent">
+                        <h3 style="color: var(--success);">The Solution</h3>
+                        <p style="margin: 1rem 0;">
+                            <span class="badge success"><span class="pulse-dot"></span> ON by default</span>
+                        </p>
+                        <p>Dispatches activity every 2 minutes</p>
+                        <p>Enables 30+ minute batch exports</p>
+                        <p>Works invisibly in background</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 7: Single Export -->
+        <section class="slide" data-slide="7">
+            <div class="slide-content">
+                <span class="tag fade-in">Feature #4</span>
+                <h1 class="gradient-text fade-in"><span class="scramble-text" data-text="One-Click Export">One-Click Export</span></h1>
+                <h2 class="fade-in">Intelligent defaults for quick exports</h2>
+
+                <div class="split fade-in" style="margin-top: 2rem;">
+                    <div>
+                        <ul class="feature-list">
+                            <li><strong>Auto-Fill Dates</strong> — Pre-populates based on preset</li>
+                            <li><strong>Smart Wait</strong> — MutationObserver detects ready state</li>
+                            <li><strong>Auto-Click Excel</strong> — Selects format automatically</li>
+                            <li><strong>File Renaming</strong> — Same smart naming applies</li>
+                        </ul>
+                        <p style="margin-top: 2rem;">Perfect for spot-checks and quick exports.</p>
+                    </div>
+                    <div class="glass" style="text-align: center;">
+                        <div class="metric">
+                            <div class="metric-value gold" data-counter="75" data-suffix="%">0%</div>
+                            <div class="metric-label">Faster per Export</div>
+                        </div>
+                        <p style="margin-top: 1rem; font-size: 1.25rem;">
+                            <span style="color: var(--warning);">2-3 min</span>
+                            <span style="color: var(--text-muted);"> → </span>
+                            <span style="color: var(--success);">30-45 sec</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 8: Auto-Close -->
+        <section class="slide" data-slide="8">
+            <div class="slide-content center">
+                <span class="tag fade-in">Feature #5</span>
+                <h1 class="gradient-text fade-in"><span class="scramble-text" data-text="Zero-Latency Close">Zero-Latency Close</span></h1>
+                <h2 class="fade-in">Instant cleanup for seamless workflows</h2>
+
+                <div class="glass fade-in" style="max-width: 900px; margin-top: 3rem;">
+                    <div class="grid grid-2">
+                        <div>
+                            <h3 style="color: var(--cyan);">How it works</h3>
+                            <ul class="feature-list">
+                                <li>Monitors download events</li>
+                                <li>Closes redirect windows instantly</li>
+                                <li>Sub-500ms latency</li>
+                                <li>Zero manual intervention</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 style="color: var(--success);">Benefits</h3>
+                            <ul class="feature-list">
+                                <li>Clean browser state</li>
+                                <li>No zombie tabs from batch exports</li>
+                                <li>RPA-friendly (no stray windows)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 9: Visual Logger -->
+        <section class="slide" data-slide="9">
+            <div class="slide-content center">
+                <span class="tag fade-in">Feature #6</span>
+                <h1 class="gradient-text fade-in"><span class="scramble-text" data-text="Visual Debugger">Visual Debugger</span></h1>
+                <h2 class="fade-in">Real-time transparency into every action</h2>
+
+                <div class="glass fade-in" style="max-width: 800px; margin-top: 3rem; background: var(--void); padding: 0; overflow: hidden;">
+                    <div style="padding: 1rem 1.5rem; border-bottom: 1px solid var(--glass-border); display: flex; align-items: center; gap: 0.75rem;">
+                        <span class="pulse-dot"></span>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.15em;">HSBC Bot — Accounts List</span>
+                    </div>
+                    <div style="padding: 1.5rem; font-family: var(--font-mono); font-size: 0.9rem; line-height: 2.2;">
+                        <div style="color: var(--cyan);">Processing account 23 of 100...</div>
+                        <div style="color: var(--success);">✓ Dubai Operations — Downloaded</div>
+                        <div style="color: var(--success);">✓ Retail Cash Account — Downloaded</div>
+                        <div style="color: var(--warning);">⚠ GSX999 — Timeout, skipping...</div>
+                        <div style="color: var(--cyan);">Processing account 27 of 100...</div>
+                    </div>
+                </div>
+
+                <p class="fade-in" style="margin-top: 2rem; color: var(--text-muted);">
+                    Color-coded status • Auto-scrolling • Last 20 events • Minimizable
+                </p>
+            </div>
+        </section>
+
+        <!-- Slide 10: Export History & Outputs -->
+        <section class="slide" data-slide="10">
+            <div class="slide-content">
+                <span class="tag fade-in">Feature #7 & #8</span>
+                <h1 class="gradient-text fade-in"><span class="scramble-text" data-text="Export Outputs">Export Outputs</span></h1>
+                <h2 class="fade-in">Complete deliverables for every batch</h2>
+
+                <div class="grid grid-3 fade-in" style="margin-top: 3rem;">
+                    <div class="glass">
+                        <h3 style="color: var(--cyan);">Excel Files</h3>
+                        <p>Smart-named files ready for reconciliation</p>
+                    </div>
+                    <div class="glass accent">
+                        <h3 style="color: var(--success);">JSON Log</h3>
+                        <p>Structured data with full account details + errors</p>
+                    </div>
+                    <div class="glass">
+                        <h3 style="color: var(--gold);">History</h3>
+                        <p>Persistent tracking via Chrome Storage API</p>
+                    </div>
+                </div>
+
+                <div class="code-block fade-in" style="margin-top: 2rem; max-width: 700px; margin-left: auto; margin-right: auto;">
+<span class="comment">// HSBC_Export_Log.json</span>
+{
+  <span class="string">"completed"</span>: [{ <span class="string">"title"</span>: <span class="string">"Dubai Ops"</span>, <span class="string">"number"</span>: <span class="string">"GSA123"</span> }],
+  <span class="string">"failed"</span>: [{ <span class="string">"number"</span>: <span class="string">"GSX999"</span>, <span class="string">"error"</span>: <span class="string">"Timeout"</span> }],
+  <span class="string">"summary"</span>: { <span class="string">"total"</span>: <span class="number">100</span>, <span class="string">"success"</span>: <span class="number">98</span> }
+}
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 11: RPA Integration -->
+        <section class="slide" data-slide="11">
+            <div class="slide-content">
+                <span class="tag gold fade-in">Advanced</span>
+                <h1 class="gradient-text fade-in"><span class="scramble-text" data-text="RPA Integration">RPA Integration</span></h1>
+                <h2 class="fade-in">Power Automate, UiPath, Selenium ready</h2>
+
+                <div class="split fade-in" style="margin-top: 2rem;">
+                    <div>
+                        <h3 style="color: var(--cyan); margin-bottom: 1.5rem;">Designed for Automation</h3>
+                        <ul class="feature-list">
+                            <li>Message protocol for external control</li>
+                            <li>Unattended workflow support</li>
+                            <li>Scheduled batch exports</li>
+                            <li>End-to-end reconciliation pipelines</li>
+                        </ul>
+                    </div>
+                    <div class="code-block" style="font-size: 0.85rem;">
+<span class="comment">// Power Automate Desktop</span>
+<span class="keyword">function</span> <span class="function">ExecuteScript</span>() {
+  <span class="keyword">var</span> btn = document.<span class="function">getElementById</span>(
+    <span class="string">'hsbc-bot-export-btn'</span>
+  );
+  btn.<span class="function">setAttribute</span>(<span class="string">'data-start'</span>, <span class="string">'%StartDate%'</span>);
+  btn.<span class="function">setAttribute</span>(<span class="string">'data-end'</span>, <span class="string">'%EndDate%'</span>);
+  btn.<span class="function">click</span>();
+  <span class="keyword">return</span> <span class="string">'OK'</span>;
+}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 12: Financial Impact -->
+        <section class="slide" data-slide="12">
+            <div class="slide-content center">
+                <span class="tag gold fade-in">ROI</span>
+                <h1 class="gradient-text fade-in"><span class="scramble-text" data-text="Financial Impact">Financial Impact</span></h1>
+                <h2 class="fade-in">The numbers speak for themselves</h2>
+
+                <div class="grid grid-4 fade-in" style="margin-top: 3rem; width: 100%;">
+                    <div class="metric">
+                        <div class="metric-value cyan" data-counter="88" data-suffix="%">0%</div>
+                        <div class="metric-label">Time Reduction</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value gold" data-counter="126">0</div>
+                        <div class="metric-label">Min Saved/Cycle</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value success" data-counter="50" data-suffix="+">0+</div>
+                        <div class="metric-label">Hours Saved/Year</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value danger" data-prefix="$" data-counter="2.5" data-suffix="K" data-decimal="1">$0K</div>
+                        <div class="metric-label">Annual Savings</div>
+                    </div>
+                </div>
+
+                <div class="comparison fade-in" style="margin-top: 4rem;">
+                    <div class="glass" style="text-align: center; padding: 2rem 3rem;">
+                        <h3 style="color: var(--warning);">Manual</h3>
+                        <div style="font-size: 3rem; font-weight: 900; color: var(--danger);">143 min</div>
+                        <p>per export cycle</p>
+                    </div>
+                    <div class="comparison-arrow">→</div>
+                    <div class="glass accent" style="text-align: center; padding: 2rem 3rem;">
+                        <h3 style="color: var(--success);">HSBC Bot</h3>
+                        <div style="font-size: 3rem; font-weight: 900; color: var(--success);">17 min</div>
+                        <p>per export cycle</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 13: Deployment -->
+        <section class="slide" data-slide="13">
+            <div class="slide-content">
+                <span class="tag fade-in">Getting Started</span>
+                <h1 class="gradient-text fade-in"><span class="scramble-text" data-text="Simple Deployment">Simple Deployment</span></h1>
+                <h2 class="fade-in">Install and go — zero configuration</h2>
+
+                <div class="split fade-in" style="margin-top: 2rem;">
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <h3>Step 1: Install</h3>
+                            <p>Add extension to Chrome (2 minutes)</p>
+                        </div>
+                        <div class="timeline-item">
+                            <h3>Step 2: Grant Permissions</h3>
+                            <p>HSBCnet domain only — no credentials stored</p>
+                        </div>
+                        <div class="timeline-item">
+                            <h3>Step 3: Navigate</h3>
+                            <p>Buttons appear automatically on HSBCnet</p>
+                        </div>
+                        <div class="timeline-item">
+                            <h3>Step 4: Export!</h3>
+                            <p>Start saving time immediately</p>
+                        </div>
+                    </div>
+                    <div class="glass" style="text-align: center;">
+                        <div class="metric">
+                            <div class="metric-value success" data-counter="99.2" data-suffix="%" data-decimal="1">0%</div>
+                            <div class="metric-label">Success Rate</div>
+                        </div>
+                        <p style="margin-top: 1.5rem;">
+                            <span class="badge success">No IT infrastructure changes</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 14: Comparison Table -->
+        <section class="slide" data-slide="14">
+            <div class="slide-content">
+                <span class="tag fade-in">Analysis</span>
+                <h1 class="gradient-text fade-in"><span class="scramble-text" data-text="Why HSBC Bot?">Why HSBC Bot?</span></h1>
+                <h2 class="fade-in">Comparison with alternatives</h2>
+
+                <div class="glass fade-in" style="margin-top: 2rem; padding: 0; overflow: hidden;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Solution</th>
+                                <th>Time</th>
+                                <th>Cost</th>
+                                <th>Complexity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Manual Process</td>
+                                <td style="color: var(--warning);">143 min</td>
+                                <td>$2.5K/year labor</td>
+                                <td>None</td>
+                            </tr>
+                            <tr>
+                                <td>Generic RPA (UiPath)</td>
+                                <td style="color: var(--success);">15 min</td>
+                                <td style="color: var(--danger);">$50K+ implementation</td>
+                                <td style="color: var(--warning);">High</td>
+                            </tr>
+                            <tr>
+                                <td>VBA Scripts</td>
+                                <td>60 min</td>
+                                <td>Dev time</td>
+                                <td>Brittle</td>
+                            </tr>
+                            <tr class="highlight-row">
+                                <td><strong>HSBC Bot Companion</strong></td>
+                                <td style="color: var(--success);"><strong>17 min</strong></td>
+                                <td style="color: var(--success);"><strong>$0</strong></td>
+                                <td style="color: var(--success);"><strong>Low</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 15: Use Cases -->
+        <section class="slide" data-slide="15">
+            <div class="slide-content center">
+                <span class="tag fade-in">Impact</span>
+                <h1 class="gradient-text fade-in"><span class="scramble-text" data-text="Real-World Use">Real-World Use</span></h1>
+                <h2 class="fade-in">How finance teams use HSBC Bot</h2>
+
+                <div class="grid grid-2 fade-in" style="margin-top: 3rem; width: 100%;">
+                    <div class="glass">
+                        <h3>Monthly Close</h3>
+                        <p>Export 120 accounts for reconciliation</p>
+                        <p style="margin-top: 1rem; color: var(--cyan); font-weight: 600;">2.5 hours → 17 minutes</p>
+                    </div>
+                    <div class="glass">
+                        <h3>Audit Response</h3>
+                        <p>3-month statement extracts</p>
+                        <p style="margin-top: 1rem; color: var(--cyan); font-weight: 600;">Full day → 51 minutes</p>
+                    </div>
+                    <div class="glass accent">
+                        <h3>RPA Workflows</h3>
+                        <p>Nightly automated exports</p>
+                        <p style="margin-top: 1rem; color: var(--success); font-weight: 600;">Zero manual touch</p>
+                    </div>
+                    <div class="glass">
+                        <h3>Team Handoffs</h3>
+                        <p>Self-documenting file names</p>
+                        <p style="margin-top: 1rem; color: var(--gold); font-weight: 600;">Zero confusion</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 16: Q&A -->
+        <section class="slide" data-slide="16">
+            <div class="slide-content">
+                <span class="tag fade-in">FAQ</span>
+                <h1 class="gradient-text fade-in"><span class="scramble-text" data-text="Common Questions">Common Questions</span></h1>
+
+                <div class="grid grid-2 fade-in" style="margin-top: 3rem;">
+                    <div class="glass">
+                        <h3 style="color: var(--cyan);">Is it secure?</h3>
+                        <p>100% local. No cloud. No credentials stored. Manifest V3 standards.</p>
+                    </div>
+                    <div class="glass">
+                        <h3 style="color: var(--cyan);">What if HSBCnet changes?</h3>
+                        <p>Regular updates. Modular design. Quick selector fixes.</p>
+                    </div>
+                    <div class="glass">
+                        <h3 style="color: var(--cyan);">What if export fails?</h3>
+                        <p>Bot logs failure, continues batch. Retry just failed accounts.</p>
+                    </div>
+                    <div class="glass">
+                        <h3 style="color: var(--cyan);">Can we automate fully?</h3>
+                        <p>Yes! RPA integration ready. Power Automate, UiPath compatible.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 17: Closing -->
+        <section class="slide" data-slide="17">
+            <div class="slide-content center">
+                <h1 class="hero-title gradient-text fade-in"><span class="scramble-text" data-text="Let's Get Started">Let's Get Started</span></h1>
+                <p class="hero-subtitle fade-in">Transform banking operations today</p>
+
+                <div class="grid grid-3 fade-in" style="margin-top: 3rem; max-width: 1100px;">
+                    <div class="glass">
+                        <h3>Option A</h3>
+                        <p>1-week pilot with 3-5 users</p>
+                    </div>
+                    <div class="glass gold-accent">
+                        <h3>Option B</h3>
+                        <p>Full team rollout this week</p>
+                        <span class="badge success" style="margin-top: 1rem;">Recommended</span>
+                    </div>
+                    <div class="glass">
+                        <h3>Option C</h3>
+                        <p>Deploy now + plan RPA phase</p>
+                    </div>
+                </div>
+
+                <p class="tagline fade-in">"Your team gets their time back. Your organization gets faster, more accurate financial processing."</p>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Navigation -->
+    <nav class="nav">
+        <button class="nav-btn magnetic" id="prevBtn" aria-label="Previous slide">←</button>
+        <div class="slide-indicator" id="slideIndicator"></div>
+        <span class="slide-counter" id="slideCounter">1 / 17</span>
+        <button class="nav-btn magnetic" id="nextBtn" aria-label="Next slide">→</button>
+    </nav>
+
+    <!-- Keyboard Hint -->
+    <div class="keyboard-hint">
+        <span class="key">←</span>
+        <span class="key">→</span>
+        <span class="key">Space</span>
+    </div>
+
+    <script>
+        // ==================== LOADING SCREEN ====================
+        class LoadingScreen {
+            constructor() {
+                this.loader = document.getElementById('loader');
+                this.progress = document.getElementById('loaderProgress');
+                this.text = document.getElementById('loaderText');
+                this.loadSteps = [
+                    { progress: 20, text: 'Loading assets' },
+                    { progress: 40, text: 'Initializing canvas' },
+                    { progress: 60, text: 'Preparing animations' },
+                    { progress: 80, text: 'Almost ready' },
+                    { progress: 100, text: 'Launching' }
+                ];
+                this.currentStep = 0;
+            }
+
+            async start() {
+                for (const step of this.loadSteps) {
+                    await this.delay(400);
+                    this.progress.style.width = step.progress + '%';
+                    this.text.textContent = step.text;
+                }
+                await this.delay(500);
+                this.hide();
+            }
+
+            delay(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+
+            hide() {
+                this.loader.classList.add('hidden');
+            }
+        }
+
+        // ==================== TEXT SCRAMBLE EFFECT ====================
+        class TextScramble {
+            constructor(el) {
+                this.el = el;
+                this.chars = '!<>-_\\/[]{}—=+*^?#________';
+                this.update = this.update.bind(this);
+            }
+
+            setText(newText) {
+                const oldText = this.el.innerText;
+                const length = Math.max(oldText.length, newText.length);
+                const promise = new Promise(resolve => this.resolve = resolve);
+                this.queue = [];
+
+                for (let i = 0; i < length; i++) {
+                    const from = oldText[i] || '';
+                    const to = newText[i] || '';
+                    const start = Math.floor(Math.random() * 40);
+                    const end = start + Math.floor(Math.random() * 40);
+                    this.queue.push({ from, to, start, end });
+                }
+
+                cancelAnimationFrame(this.frameRequest);
+                this.frame = 0;
+                this.update();
+                return promise;
+            }
+
+            update() {
+                let output = '';
+                let complete = 0;
+
+                for (let i = 0, n = this.queue.length; i < n; i++) {
+                    let { from, to, start, end, char } = this.queue[i];
+
+                    if (this.frame >= end) {
+                        complete++;
+                        output += to;
+                    } else if (this.frame >= start) {
+                        if (!char || Math.random() < 0.28) {
+                            char = this.randomChar();
+                            this.queue[i].char = char;
+                        }
+                        output += `<span style="color: var(--cyan)">${char}</span>`;
+                    } else {
+                        output += from;
+                    }
+                }
+
+                this.el.innerHTML = output;
+
+                if (complete === this.queue.length) {
+                    this.resolve();
+                } else {
+                    this.frameRequest = requestAnimationFrame(this.update);
+                    this.frame++;
+                }
+            }
+
+            randomChar() {
+                return this.chars[Math.floor(Math.random() * this.chars.length)];
+            }
+        }
+
+        // ==================== 3D TILT EFFECT ====================
+        class TiltEffect {
+            constructor() {
+                this.cards = document.querySelectorAll('.glass');
+                this.init();
+            }
+
+            init() {
+                this.cards.forEach(card => {
+                    card.addEventListener('mousemove', (e) => this.handleMove(e, card));
+                    card.addEventListener('mouseleave', (e) => this.handleLeave(e, card));
+                });
+            }
+
+            handleMove(e, card) {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                const rotateX = (y - centerY) / 20;
+                const rotateY = (centerX - x) / 20;
+
+                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+            }
+
+            handleLeave(e, card) {
+                card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)';
+            }
+        }
+
+        // ==================== MAGNETIC BUTTONS ====================
+        class MagneticButtons {
+            constructor() {
+                this.buttons = document.querySelectorAll('.magnetic');
+                this.init();
+            }
+
+            init() {
+                this.buttons.forEach(btn => {
+                    btn.addEventListener('mousemove', (e) => this.handleMove(e, btn));
+                    btn.addEventListener('mouseleave', (e) => this.handleLeave(e, btn));
+                });
+            }
+
+            handleMove(e, btn) {
+                const rect = btn.getBoundingClientRect();
+                const x = e.clientX - rect.left - rect.width / 2;
+                const y = e.clientY - rect.top - rect.height / 2;
+
+                btn.style.transform = `translate(${x * 0.3}px, ${y * 0.3}px) scale(1.1)`;
+            }
+
+            handleLeave(e, btn) {
+                btn.style.transform = 'translate(0, 0) scale(1)';
+            }
+        }
+
+        // ==================== CLICK PARTICLES ====================
+        class ClickParticles {
+            constructor() {
+                document.addEventListener('click', (e) => this.createBurst(e));
+            }
+
+            createBurst(e) {
+                const colors = ['#00f0ff', '#0066ff', '#ffd700', '#00ff88'];
+                const particleCount = 12;
+
+                for (let i = 0; i < particleCount; i++) {
+                    this.createParticle(e.clientX, e.clientY, colors[i % colors.length], i * (360 / particleCount));
+                }
+            }
+
+            createParticle(x, y, color, angle) {
+                const particle = document.createElement('div');
+                particle.className = 'click-particle';
+                particle.style.left = x + 'px';
+                particle.style.top = y + 'px';
+                particle.style.background = color;
+                particle.style.boxShadow = `0 0 10px ${color}`;
+                document.body.appendChild(particle);
+
+                const radians = angle * (Math.PI / 180);
+                const distance = 50 + Math.random() * 50;
+                const duration = 600 + Math.random() * 400;
+
+                particle.animate([
+                    { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
+                    {
+                        transform: `translate(${Math.cos(radians) * distance - 4}px, ${Math.sin(radians) * distance - 4}px) scale(0)`,
+                        opacity: 0
+                    }
+                ], {
+                    duration: duration,
+                    easing: 'cubic-bezier(0, 0.5, 0.5, 1)'
+                }).onfinish = () => particle.remove();
+            }
+        }
+
+        // ==================== LIQUID TRANSITION (WebGL) ====================
+        class LiquidTransition {
+            constructor() {
+                this.canvas = document.createElement('canvas');
+                this.gl = this.canvas.getContext('webgl') || this.canvas.getContext('experimental-webgl');
+                this.intensity = 0;
+                this.time = 0;
+                this.isAnimating = false;
+                this.supported = !!this.gl;
+
+                if (this.supported) {
+                    this.init();
+                }
+            }
+
+            init() {
+                this.canvas.id = 'liquidCanvas';
+                this.canvas.style.cssText = `
+                    position: fixed;
+                    top: 0; left: 0;
+                    width: 100%; height: 100%;
+                    pointer-events: none;
+                    z-index: 9997;
+                    opacity: 0;
+                    transition: opacity 0.1s ease;
+                `;
+                document.body.appendChild(this.canvas);
+
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+
+                this.setupShaders();
+                this.setupGeometry();
+            }
+
+            resize() {
+                const dpr = Math.min(window.devicePixelRatio, 2);
+                this.canvas.width = window.innerWidth * dpr;
+                this.canvas.height = window.innerHeight * dpr;
+                if (this.gl) {
+                    this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+                }
+            }
+
+            setupShaders() {
+                const gl = this.gl;
+
+                // Vertex shader
+                const vertexSource = `
+                    attribute vec2 position;
+                    varying vec2 vUv;
+                    void main() {
+                        vUv = position * 0.5 + 0.5;
+                        gl_Position = vec4(position, 0.0, 1.0);
+                    }
+                `;
+
+                // Fragment shader with liquid distortion + RGB split
+                const fragmentSource = `
+                    precision mediump float;
+                    uniform float uTime;
+                    uniform float uIntensity;
+                    uniform vec2 uResolution;
+                    varying vec2 vUv;
+
+                    void main() {
+                        vec2 uv = vUv;
+
+                        // Multi-layer wave distortion
+                        float wave1 = sin(uv.y * 15.0 + uTime * 4.0) * uIntensity;
+                        float wave2 = sin(uv.x * 12.0 - uTime * 3.0) * uIntensity * 0.7;
+                        float wave3 = sin((uv.x + uv.y) * 8.0 + uTime * 5.0) * uIntensity * 0.5;
+
+                        float wave = wave1 + wave2 + wave3;
+
+                        // Radial distortion from center
+                        vec2 center = vec2(0.5, 0.5);
+                        float dist = distance(uv, center);
+                        float radial = sin(dist * 20.0 - uTime * 6.0) * uIntensity * 0.3;
+
+                        // Combined displacement
+                        vec2 displacement = vec2(
+                            wave * 0.08 + radial * 0.05,
+                            wave * 0.04 + radial * 0.03
+                        );
+
+                        // RGB chromatic aberration
+                        float r = 0.5 + displacement.x + uIntensity * 0.15;
+                        float g = 0.5 + displacement.y;
+                        float b = 0.5 - displacement.x - uIntensity * 0.15;
+
+                        // Blend colors with noise-like pattern
+                        vec3 color = vec3(r, g, b);
+
+                        // Add glow effect
+                        float glow = uIntensity * 0.3 * (1.0 - dist);
+                        color += vec3(0.0, 0.94, 1.0) * glow;
+
+                        // Apply vignette
+                        float vignette = 1.0 - dist * uIntensity * 0.5;
+                        color *= vignette;
+
+                        gl_FragColor = vec4(color, uIntensity * 0.6);
+                    }
+                `;
+
+                // Compile shaders
+                const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+                gl.shaderSource(vertexShader, vertexSource);
+                gl.compileShader(vertexShader);
+
+                const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+                gl.shaderSource(fragmentShader, fragmentSource);
+                gl.compileShader(fragmentShader);
+
+                // Create program
+                this.program = gl.createProgram();
+                gl.attachShader(this.program, vertexShader);
+                gl.attachShader(this.program, fragmentShader);
+                gl.linkProgram(this.program);
+                gl.useProgram(this.program);
+
+                // Get uniform locations
+                this.uTime = gl.getUniformLocation(this.program, 'uTime');
+                this.uIntensity = gl.getUniformLocation(this.program, 'uIntensity');
+                this.uResolution = gl.getUniformLocation(this.program, 'uResolution');
+            }
+
+            setupGeometry() {
+                const gl = this.gl;
+
+                // Full-screen quad
+                const vertices = new Float32Array([
+                    -1, -1,
+                     1, -1,
+                    -1,  1,
+                     1,  1
+                ]);
+
+                const buffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+                gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+                const position = gl.getAttribLocation(this.program, 'position');
+                gl.enableVertexAttribArray(position);
+                gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
+
+                // Enable blending for transparency
+                gl.enable(gl.BLEND);
+                gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+            }
+
+            trigger(direction) {
+                if (!this.supported || this.isAnimating) return;
+
+                this.canvas.style.opacity = '1';
+                this.isAnimating = true;
+
+                const duration = 900;
+                const start = performance.now();
+
+                const animate = (time) => {
+                    const elapsed = time - start;
+                    const progress = Math.min(elapsed / duration, 1);
+
+                    // Smooth ease-in-out curve
+                    const eased = progress < 0.5
+                        ? 4 * progress * progress * progress
+                        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+                    // Bell curve for intensity (peaks in middle)
+                    this.intensity = Math.sin(progress * Math.PI) * 1.2;
+                    this.time = time / 1000;
+
+                    this.render();
+
+                    if (progress < 1) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        this.intensity = 0;
+                        this.canvas.style.opacity = '0';
+                        this.isAnimating = false;
+                    }
+                };
+
+                requestAnimationFrame(animate);
+            }
+
+            render() {
+                const gl = this.gl;
+                if (!gl) return;
+
+                gl.clearColor(0, 0, 0, 0);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+
+                gl.uniform1f(this.uTime, this.time);
+                gl.uniform1f(this.uIntensity, this.intensity);
+                gl.uniform2f(this.uResolution, this.canvas.width, this.canvas.height);
+
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            }
+        }
+
+        // ==================== SLIDESHOW APP ====================
+        class SlideshowApp {
+            constructor(liquidTransition = null) {
+                this.currentSlide = 1;
+                this.totalSlides = document.querySelectorAll('.slide').length;
+                this.slides = document.querySelectorAll('.slide');
+                this.isAnimating = false;
+                this.animationDuration = 1000;
+                this.scramblers = new Map();
+                this.liquidTransition = liquidTransition;
+
+                this.progressBar = document.getElementById('progressBar');
+                this.slideCounter = document.getElementById('slideCounter');
+                this.slideIndicator = document.getElementById('slideIndicator');
+
+                this.init();
+            }
+
+            init() {
+                this.createIndicators();
+                this.initScramblers();
+                this.bindEvents();
+                this.updateSlide();
+            }
+
+            initScramblers() {
+                document.querySelectorAll('.scramble-text').forEach(el => {
+                    this.scramblers.set(el, new TextScramble(el));
+                });
+            }
+
+            createIndicators() {
+                for (let i = 1; i <= this.totalSlides; i++) {
+                    const dot = document.createElement('div');
+                    dot.className = 'slide-dot' + (i === 1 ? ' active' : '');
+                    dot.addEventListener('click', () => this.goToSlide(i));
+                    this.slideIndicator.appendChild(dot);
+                }
+            }
+
+            bindEvents() {
+                document.getElementById('prevBtn').addEventListener('click', () => this.prev());
+                document.getElementById('nextBtn').addEventListener('click', () => this.next());
+
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'ArrowRight' || e.key === ' ') {
+                        e.preventDefault();
+                        this.next();
+                    } else if (e.key === 'ArrowLeft') {
+                        e.preventDefault();
+                        this.prev();
+                    } else if (e.key === 'Home') {
+                        e.preventDefault();
+                        this.goToSlide(1);
+                    } else if (e.key === 'End') {
+                        e.preventDefault();
+                        this.goToSlide(this.totalSlides);
+                    }
+                });
+
+                // Touch swipe
+                let touchStartX = 0;
+                document.addEventListener('touchstart', (e) => {
+                    touchStartX = e.touches[0].clientX;
+                }, { passive: true });
+
+                document.addEventListener('touchend', (e) => {
+                    const diff = touchStartX - e.changedTouches[0].clientX;
+                    if (Math.abs(diff) > 50) {
+                        if (diff > 0) this.next();
+                        else this.prev();
+                    }
+                }, { passive: true });
+            }
+
+            next() {
+                if (this.isAnimating || this.currentSlide >= this.totalSlides) return;
+                this.goToSlide(this.currentSlide + 1);
+            }
+
+            prev() {
+                if (this.isAnimating || this.currentSlide <= 1) return;
+                this.goToSlide(this.currentSlide - 1);
+            }
+
+            goToSlide(n) {
+                if (this.isAnimating || n === this.currentSlide || n < 1 || n > this.totalSlides) return;
+
+                this.isAnimating = true;
+                const direction = n > this.currentSlide ? 'left' : 'right';
+                const oldSlide = this.slides[this.currentSlide - 1];
+                const newSlide = this.slides[n - 1];
+
+                // Trigger liquid distortion effect
+                if (this.liquidTransition) {
+                    this.liquidTransition.trigger(direction);
+                }
+
+                oldSlide.classList.remove('active');
+                oldSlide.classList.add('exit-' + direction);
+
+                newSlide.classList.add('active');
+
+                this.currentSlide = n;
+                this.updateUI();
+                this.animateCounters(newSlide);
+                this.triggerScramble(newSlide);
+
+                setTimeout(() => {
+                    oldSlide.classList.remove('exit-left', 'exit-right');
+                    this.isAnimating = false;
+                }, this.animationDuration);
+            }
+
+            triggerScramble(slide) {
+                const texts = slide.querySelectorAll('.scramble-text');
+                texts.forEach(el => {
+                    const scrambler = this.scramblers.get(el);
+                    if (scrambler) {
+                        scrambler.setText(el.dataset.text);
+                    }
+                });
+            }
+
+            updateSlide() {
+                this.slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i + 1 === this.currentSlide);
+                });
+                this.updateUI();
+                this.animateCounters(this.slides[this.currentSlide - 1]);
+                this.triggerScramble(this.slides[this.currentSlide - 1]);
+            }
+
+            updateUI() {
+                this.progressBar.style.width = `${(this.currentSlide / this.totalSlides) * 100}%`;
+                this.slideCounter.textContent = `${this.currentSlide} / ${this.totalSlides}`;
+
+                const dots = this.slideIndicator.querySelectorAll('.slide-dot');
+                dots.forEach((dot, i) => {
+                    dot.classList.toggle('active', i + 1 === this.currentSlide);
+                });
+            }
+
+            animateCounters(slide) {
+                const counters = slide.querySelectorAll('[data-counter]');
+                counters.forEach(counter => {
+                    const target = parseFloat(counter.dataset.counter);
+                    const prefix = counter.dataset.prefix || '';
+                    const suffix = counter.dataset.suffix || '';
+                    const decimal = parseInt(counter.dataset.decimal) || 0;
+                    const duration = 2000;
+                    const startTime = performance.now();
+
+                    const animate = (currentTime) => {
+                        const elapsed = currentTime - startTime;
+                        const progress = Math.min(elapsed / duration, 1);
+                        const eased = 1 - Math.pow(1 - progress, 4);
+                        const current = target * eased;
+
+                        counter.textContent = prefix + current.toFixed(decimal) + suffix;
+
+                        if (progress < 1) {
+                            requestAnimationFrame(animate);
+                        }
+                    };
+
+                    requestAnimationFrame(animate);
+                });
+            }
+        }
+
+        // ==================== CANVAS BACKGROUND ====================
+        class ParticleBackground {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.particles = [];
+                this.mouse = { x: null, y: null, radius: 150 };
+
+                this.resize();
+                this.init();
+                this.animate();
+
+                window.addEventListener('resize', () => this.resize());
+                document.addEventListener('mousemove', (e) => {
+                    this.mouse.x = e.clientX;
+                    this.mouse.y = e.clientY;
+                });
+            }
+
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+                this.init();
+            }
+
+            init() {
+                this.particles = [];
+                const numParticles = Math.floor((this.canvas.width * this.canvas.height) / 15000);
+
+                for (let i = 0; i < numParticles; i++) {
+                    this.particles.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        vx: (Math.random() - 0.5) * 0.3,
+                        vy: (Math.random() - 0.5) * 0.3,
+                        radius: Math.random() * 1.5 + 0.5,
+                        opacity: Math.random() * 0.5 + 0.2
+                    });
+                }
+            }
+
+            animate() {
+                this.ctx.fillStyle = '#050505';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                this.drawGrid();
+
+                this.particles.forEach((p, i) => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+
+                    if (p.x < 0) p.x = this.canvas.width;
+                    if (p.x > this.canvas.width) p.x = 0;
+                    if (p.y < 0) p.y = this.canvas.height;
+                    if (p.y > this.canvas.height) p.y = 0;
+
+                    if (this.mouse.x !== null) {
+                        const dx = p.x - this.mouse.x;
+                        const dy = p.y - this.mouse.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+
+                        if (dist < this.mouse.radius) {
+                            const force = (this.mouse.radius - dist) / this.mouse.radius;
+                            p.x += dx * force * 0.02;
+                            p.y += dy * force * 0.02;
+                        }
+                    }
+
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    this.ctx.fillStyle = `rgba(0, 240, 255, ${p.opacity})`;
+                    this.ctx.fill();
+
+                    for (let j = i + 1; j < this.particles.length; j++) {
+                        const p2 = this.particles[j];
+                        const dx = p.x - p2.x;
+                        const dy = p.y - p2.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+
+                        if (dist < 120) {
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(p.x, p.y);
+                            this.ctx.lineTo(p2.x, p2.y);
+                            const opacity = (1 - dist / 120) * 0.15;
+                            this.ctx.strokeStyle = `rgba(0, 240, 255, ${opacity})`;
+                            this.ctx.stroke();
+                        }
+                    }
+                });
+
+                requestAnimationFrame(() => this.animate());
+            }
+
+            drawGrid() {
+                const gridSize = 80;
+                this.ctx.strokeStyle = 'rgba(0, 102, 255, 0.03)';
+                this.ctx.lineWidth = 1;
+
+                for (let x = 0; x < this.canvas.width; x += gridSize) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, 0);
+                    this.ctx.lineTo(x, this.canvas.height);
+                    this.ctx.stroke();
+                }
+
+                for (let y = 0; y < this.canvas.height; y += gridSize) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, y);
+                    this.ctx.lineTo(this.canvas.width, y);
+                    this.ctx.stroke();
+                }
+            }
+        }
+
+        // ==================== CUSTOM CURSOR ====================
+        class CustomCursor {
+            constructor() {
+                this.cursor = document.getElementById('cursor');
+                this.follower = document.getElementById('cursorFollower');
+                this.cursorX = 0;
+                this.cursorY = 0;
+                this.followerX = 0;
+                this.followerY = 0;
+                this.trail = [];
+                this.trailLength = 8;
+
+                this.init();
+            }
+
+            init() {
+                // Create trail elements
+                for (let i = 0; i < this.trailLength; i++) {
+                    const dot = document.createElement('div');
+                    dot.className = 'cursor-trail';
+                    dot.style.opacity = (1 - i / this.trailLength) * 0.3;
+                    dot.style.width = (6 - i * 0.5) + 'px';
+                    dot.style.height = (6 - i * 0.5) + 'px';
+                    document.body.appendChild(dot);
+                    this.trail.push({ el: dot, x: 0, y: 0 });
+                }
+
+                document.addEventListener('mousemove', (e) => {
+                    this.cursorX = e.clientX;
+                    this.cursorY = e.clientY;
+                });
+
+                const interactives = document.querySelectorAll('button, a, .slide-dot, .glass');
+                interactives.forEach(el => {
+                    el.addEventListener('mouseenter', () => {
+                        this.cursor.classList.add('active');
+                        this.follower.classList.add('active');
+                    });
+                    el.addEventListener('mouseleave', () => {
+                        this.cursor.classList.remove('active');
+                        this.follower.classList.remove('active');
+                    });
+                });
+
+                this.animate();
+            }
+
+            animate() {
+                this.cursor.style.left = this.cursorX + 'px';
+                this.cursor.style.top = this.cursorY + 'px';
+
+                this.followerX += (this.cursorX - this.followerX) * 0.15;
+                this.followerY += (this.cursorY - this.followerY) * 0.15;
+                this.follower.style.left = this.followerX + 'px';
+                this.follower.style.top = this.followerY + 'px';
+
+                // Update trail
+                let prevX = this.cursorX;
+                let prevY = this.cursorY;
+
+                this.trail.forEach((dot, i) => {
+                    const speed = 0.3 - i * 0.02;
+                    dot.x += (prevX - dot.x) * speed;
+                    dot.y += (prevY - dot.y) * speed;
+                    dot.el.style.left = dot.x + 'px';
+                    dot.el.style.top = dot.y + 'px';
+                    dot.el.style.opacity = (1 - i / this.trailLength) * 0.2;
+                    prevX = dot.x;
+                    prevY = dot.y;
+                });
+
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+
+        // ==================== INIT ====================
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Start loading screen
+            const loader = new LoadingScreen();
+            await loader.start();
+
+            // Initialize all effects
+            new ParticleBackground(document.getElementById('bgCanvas'));
+
+            // Create liquid transition effect (WebGL)
+            const liquidTransition = new LiquidTransition();
+
+            // Initialize slideshow with liquid transitions
+            new SlideshowApp(liquidTransition);
+
+            new CustomCursor();
+            new TiltEffect();
+            new MagneticButtons();
+            new ClickParticles();
+        });
+    </script>
+</body>
+</html>
