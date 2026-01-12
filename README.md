@@ -4,6 +4,7 @@
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-green)](https://developer.chrome.com/docs/extensions/mv3/intro/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![RPA Ready](https://img.shields.io/badge/RPA-Ready-orange)](https://github.com)
+[![Version](https://img.shields.io/badge/Version-2.3-blue)](https://github.com)
 
 A powerful Chrome extension to automate workflows on the HSBCnet banking portal. Designed for both human users and RPA bot integration with intelligent features for batch processing, smart date handling, and export tracking.
 
@@ -33,7 +34,7 @@ A powerful Chrome extension to automate workflows on the HSBCnet banking portal.
 
 - **Automatic Loop**: Clicks through ALL accounts (100+), exports each one, returns to list
 - **Pagination Support**: Handles multiple pages automatically
-- **Smart File Naming**: Files renamed to `{AccountTitle}_{AccountNumber}_{Currency}_{DateFrom}_TO_{DateTo}.xlsx`
+- **Smart File Naming**: Files organized into `HSBC_Exports/YYYY-MM-DD/` subfolder and renamed to `{AccountTitle}_{AccountNumber}_{Currency}_{DateFrom}_TO_{DateTo}.xlsx`
 - **Error Recovery**: Failed accounts are logged and skipped, loop continues
 - **Completion Modal**: Summary popup showing success/fail counts, duration, and failed account details
 - **Export Log JSON**: Auto-downloads `HSBC_Export_Log.json` with full account details for all completed/failed exports
@@ -57,7 +58,7 @@ A powerful Chrome extension to automate workflows on the HSBCnet banking portal.
 - **Smart Date Filling**: Prompts for Start/End dates (defaulting to current month) and auto-fills them
 - **Smart Wait**: Intelligently monitors the transaction table and clicks export as soon as data finishes loading (no fixed delays)
 - **Auto-Download**: Automatically selects the Excel option to start the download
-- **Smart File Naming**: Same naming format as Export All: `{AccountTitle}_{AccountNumber}_{Currency}_{DateFrom}_TO_{DateTo}.xlsx`
+- **Smart File Naming**: Same organization as Export All - saved to `HSBC_Exports/YYYY-MM-DD/` subfolder
 - **RPA Status Polling**: `data-status` attribute for Power Automate Desktop integration (see RPA section below)
 
 ### 4. Zero-Latency Auto-Close
@@ -143,9 +144,22 @@ _Coming soon: Screenshots of the extension in action_
 
 ---
 
-## File Naming Format
+## Download Organization
 
-Downloads are automatically renamed to:
+Downloads are automatically organized into dated subfolders:
+
+```
+Downloads/
+└── HSBC_Exports/
+    └── 2026-01-12/                    (date when export was run)
+        ├── HSBC_Export_Log.json       (export summary)
+        ├── STYLE_AVENUE_020-133989-001_AED_01-01-2026_TO_11-01-2026.xlsx
+        ├── GUESS_EMIRATES_023-860216-001_AED_01-01-2026_TO_11-01-2026.xlsx
+        └── ... (all exports from that session)
+```
+
+### File Naming Format
+
 ```
 {AccountTitle}_{AccountNumber}_{Currency}_{DateFrom}_TO_{DateTo}.xlsx
 ```
@@ -154,6 +168,8 @@ Downloads are automatically renamed to:
 ```
 C G R FZE_021-894472-001_AED_06-12-2025_TO_06-12-2025.xlsx
 ```
+
+Chrome automatically creates the folders if they don't exist.
 
 ---
 
