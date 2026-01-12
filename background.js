@@ -4,6 +4,7 @@ console.log("HSBC Bot Background Service Worker Loaded");
 
 // --- Download Context for File Renaming ---
 let pendingDownloadContext = null;
+let pendingJsonDownload = null; // For JSON log file
 
 // Listen for messages
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -34,13 +35,75 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             }
         }, 60000);
     }
+
+    // Download JSON log to HSBC_Exports subfolder
+    if (message.action === "download_json_log") {
+        try {
+            // Set context for onDeterminingFilename to use
+            pendingJsonDownload = {
+                filename: message.filename,
+                timestamp: Date.now()
+            };
+
+            // Convert string to base64 safely (handles Unicode and large files)
+            const utf8Bytes = new TextEncoder().encode(message.content);
+            let binary = '';
+            for (let i = 0; i < utf8Bytes.length; i++) {
+                binary += String.fromCharCode(utf8Bytes[i]);
+            }
+            const base64 = btoa(binary);
+            const dataUrl = `data:application/json;base64,${base64}`;
+
+            console.log("[HSBC Bot] Starting JSON download, context set");
+
+            chrome.downloads.download({
+                url: dataUrl,
+                saveAs: false
+            }, (downloadId) => {
+                if (chrome.runtime.lastError) {
+                    console.log("[HSBC Bot] JSON download error:", chrome.runtime.lastError);
+                    pendingJsonDownload = null;
+                    sendResponse({ success: false, error: chrome.runtime.lastError.message });
+                } else {
+                    console.log("[HSBC Bot] JSON download started, id:", downloadId);
+                    sendResponse({ success: true });
+                }
+            });
+
+            // Auto-clear context after 10s (safety)
+            setTimeout(() => {
+                if (pendingJsonDownload && pendingJsonDownload.timestamp === message.timestamp) {
+                    pendingJsonDownload = null;
+                }
+            }, 10000);
+        } catch (err) {
+            console.log("[HSBC Bot] JSON download exception:", err);
+            pendingJsonDownload = null;
+            sendResponse({ success: false, error: err.message });
+        }
+
+        return true; // Keep channel open for async response
+    }
 });
 
 // --- Rename Downloads ---
 chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
     console.log("[HSBC Bot] onDeterminingFilename:", downloadItem.filename);
 
-    // Check if we have context and it's an xlsx file from HSBC
+    // Get today's date for folder organization (export run date)
+    const today = new Date();
+    const dateFolder = today.toISOString().split('T')[0]; // "YYYY-MM-DD"
+
+    // Handle JSON log file download
+    if (pendingJsonDownload && downloadItem.filename.toLowerCase().endsWith('.json')) {
+        const fullPath = `HSBC_Exports/${dateFolder}/${pendingJsonDownload.filename}`;
+        console.log("[HSBC Bot] Saving JSON to:", fullPath);
+        suggest({ filename: fullPath });
+        pendingJsonDownload = null;
+        return;
+    }
+
+    // Handle Excel file download (from HSBC export)
     if (pendingDownloadContext && downloadItem.filename.toLowerCase().endsWith('.xlsx')) {
         const ctx = pendingDownloadContext;
 
@@ -50,15 +113,19 @@ chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
         // Build filename: Title_AccountNumber_Currency_DateFrom_TO_DateTo.xlsx
         const newFilename = `${safeTitle}_${ctx.number}_${ctx.currency}_${ctx.dateFrom}_TO_${ctx.dateTo}.xlsx`;
 
-        console.log("[HSBC Bot] Renaming to:", newFilename);
-        suggest({ filename: newFilename });
+        // Build full path with subfolder: HSBC_Exports/YYYY-MM-DD/filename.xlsx
+        const fullPath = `HSBC_Exports/${dateFolder}/${newFilename}`;
+
+        console.log("[HSBC Bot] Saving Excel to:", fullPath);
+        suggest({ filename: fullPath });
 
         // Clear context after use
         pendingDownloadContext = null;
-    } else {
-        // No context or not xlsx - use default filename
-        suggest();
+        return;
     }
+
+    // No context - use default filename
+    suggest();
 });
 
 // Listen for new downloads

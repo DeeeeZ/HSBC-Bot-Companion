@@ -26,6 +26,10 @@ function initLogger() {
                 0% { transform: translateX(-100%); }
                 100% { transform: translateX(100%); }
             }
+            @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.5; }
+            }
         `;
         document.head.appendChild(style);
     }
@@ -57,17 +61,16 @@ function initLogger() {
 
     logOverlay.innerHTML = `
         <div id="hsbc-logger-panel" style="
-            background: rgba(30, 30, 30, 0.9);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+            background: rgba(17, 24, 39, 0.96);
+            border: 1px solid rgba(75, 85, 99, 0.3);
             border-radius: 8px;
-            padding: 10px 14px;
-            min-width: 280px;
-            max-width: 400px;
-            max-height: 450px;
+            padding: 10px 12px;
+            min-width: 260px;
+            max-width: 360px;
+            max-height: 300px;
             overflow-y: auto;
-            color: rgba(255,255,255,0.9);
-            box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+            color: rgba(255,255,255,0.92);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
         ">
             <div id="hsbc-logger-header" style="
                 display: flex;
@@ -75,14 +78,14 @@ function initLogger() {
                 gap: 8px;
                 padding-bottom: 8px;
                 margin-bottom: 8px;
-                border-bottom: 1px solid rgba(255,255,255,0.1);
+                border-bottom: 1px solid rgba(75, 85, 99, 0.4);
                 font-weight: 600;
                 font-size: 10px;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
-                color: rgba(255,255,255,0.6);
+                color: rgba(156, 163, 175, 0.9);
             ">
-                <span style="
+                <span id="hsbc-status-dot" style="
                     width: 8px;
                     height: 8px;
                     background: ${statusColor};
@@ -93,7 +96,7 @@ function initLogger() {
                 <button id="hsbc-logger-minimize" style="
                     background: none;
                     border: none;
-                    color: rgba(255,255,255,0.5);
+                    color: rgba(156, 163, 175, 0.7);
                     cursor: pointer;
                     padding: 2px 6px;
                     font-size: 14px;
@@ -102,24 +105,24 @@ function initLogger() {
                     transition: all 0.15s;
                 " title="Minimize">−</button>
             </div>
-            <div id="hsbc-logger-content" style="font-size: 11px; line-height: 1.5;">
-                <div style="color: rgba(255,255,255,0.5);">Watching for actions...</div>
+            <div id="hsbc-logger-content" style="font-size: 11px; line-height: 1.4;">
+                <div style="color: rgba(156, 163, 175, 0.7);">Watching for actions...</div>
             </div>
         </div>
         <div id="hsbc-logger-minimized" style="
             display: none;
-            background: rgba(30, 30, 30, 0.9);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+            background: rgba(17, 24, 39, 0.96);
+            border: 1px solid rgba(75, 85, 99, 0.3);
             border-radius: 8px;
             padding: 8px 12px;
-            color: rgba(255,255,255,0.9);
-            box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+            color: rgba(255,255,255,0.92);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
             cursor: pointer;
             font-size: 10px;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            transition: all 0.15s ease;
         ">
             <span style="
                 display: inline-block;
@@ -196,7 +199,7 @@ function logError(msg, err) {
         logContent.innerHTML = '';
     }
 
-    logContent.innerHTML += `<div style="padding:2px 0; color:#ff6b6b;">✕ ${msg}</div>`;
+    logContent.innerHTML += `<div style="padding:2px 0; color:#ef4444;">✕ ${msg}</div>`;
 }
 
 function logRPA(msg) {
@@ -660,29 +663,29 @@ function showDateModal() {
 
                     <div style="display:flex; justify-content:flex-end; gap:12px;">
                         <button id="modal-cancel" style="
-                            padding:12px 28px;
-                            border:2px solid #e5e7eb;
-                            background:white;
+                            padding:10px 24px;
+                            border:1px solid #d1d5db;
+                            background:#ffffff;
                             color:#6b7280;
-                            border-radius:8px;
+                            border-radius:6px;
                             cursor:pointer;
-                            font-size:14px;
+                            font-size:13px;
                             font-weight:600;
                             font-family:inherit;
-                            transition:all 0.2s ease;
+                            transition:all 0.15s ease;
                         ">Cancel</button>
                         <button id="modal-start-export" style="
-                            padding:12px 28px;
+                            padding:10px 24px;
                             border:none;
-                            background:linear-gradient(135deg, #db0011 0%, #a50000 100%);
+                            background:#db0011;
                             color:white;
-                            border-radius:8px;
+                            border-radius:6px;
                             cursor:pointer;
-                            font-size:14px;
+                            font-size:13px;
                             font-weight:600;
                             font-family:inherit;
-                            box-shadow:0 2px 8px rgba(219,0,17,0.25);
-                            transition:all 0.2s ease;
+                            box-shadow:0 1px 3px rgba(0,0,0,0.1);
+                            transition:all 0.15s ease;
                         ">Start Export</button>
                     </div>
                 </div>
@@ -776,14 +779,14 @@ function showDateModal() {
         // Start Export button with hover effects
         const startExportBtn = document.getElementById('modal-start-export');
         startExportBtn.onmouseover = () => {
-            startExportBtn.style.background = 'linear-gradient(135deg, #ff1a2f 0%, #db0011 100%)';
+            startExportBtn.style.background = '#c50010';
             startExportBtn.style.transform = 'translateY(-1px)';
-            startExportBtn.style.boxShadow = '0 4px 12px rgba(219,0,17,0.35)';
+            startExportBtn.style.boxShadow = '0 4px 8px rgba(219,0,17,0.2)';
         };
         startExportBtn.onmouseout = () => {
-            startExportBtn.style.background = 'linear-gradient(135deg, #db0011 0%, #a50000 100%)';
+            startExportBtn.style.background = '#db0011';
             startExportBtn.style.transform = 'translateY(0)';
-            startExportBtn.style.boxShadow = '0 2px 8px rgba(219,0,17,0.25)';
+            startExportBtn.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
         };
         startExportBtn.onclick = () => {
             const startVal = document.getElementById('modal-start').value.trim();
@@ -1153,12 +1156,55 @@ async function handleExportFlow(e) {
             if (!endDateInput) return;
         }
 
-        // 1. SET DATES
-        const startEl = document.getElementById('filter__startDate');
-        const endEl = document.getElementById('filter__endDate');
+        // 1. CLICK EDIT BUTTON TO REVEAL DATE FIELDS (if needed)
+        log("Looking for date inputs...");
+        let startEl = document.getElementById('dateFieldFrom-field');
+        let endEl = document.getElementById('dateFieldTo-field');
+
+        // If date fields not visible, click the edit button to reveal them
+        if (!startEl || !endEl) {
+            log("Date fields hidden, clicking edit button...");
+            const editBtn = document.getElementById('edit_date');
+            if (editBtn) {
+                editBtn.click();
+                await sleep(1000); // Wait for fields to appear (increased from 500ms)
+
+                // Double-check and retry click if still not visible
+                startEl = document.getElementById('dateFieldFrom-field');
+                if (!startEl) {
+                    log("Retrying edit button click...");
+                    editBtn.click();
+                    await sleep(1000);
+                }
+            } else {
+                log("Edit button not found - date fields may already be visible");
+            }
+        }
+
+        // 2. WAIT FOR DATE INPUTS TO LOAD
+        log("Waiting for date inputs...");
+        try {
+            startEl = await waitForElement('#dateFieldFrom-field', 10000);
+            endEl = await waitForElement('#dateFieldTo-field', 5000);
+        } catch (err) {
+            logError("Date inputs NOT found after waiting.");
+            const btn = document.getElementById('hsbc-bot-export-btn');
+            if (btn) {
+                btn.setAttribute('data-status', 'error');
+                btn.textContent = 'ERROR';
+                btn.style.backgroundColor = '#ef4444';
+            }
+            return;
+        }
 
         if (!startEl || !endEl) {
             logError("Date inputs NOT found.");
+            const btn = document.getElementById('hsbc-bot-export-btn');
+            if (btn) {
+                btn.setAttribute('data-status', 'error');
+                btn.textContent = 'ERROR';
+                btn.style.backgroundColor = '#ef4444';
+            }
             return;
         }
 
@@ -1554,7 +1600,10 @@ async function processNextAccount() {
 
         // 3. Wait for details page to load (look for header actions container first)
         await waitForElement('ul.header-actions', 10000);
-        await sleep(500); // Let page settle
+
+        // Also wait for the edit date button to be available (date fields are hidden until clicked)
+        await waitForElement('#edit_date', 10000);
+        await sleep(300); // Let page settle
 
         // 4. Force button injection if not present
         if (!document.getElementById('hsbc-bot-export-btn')) {
@@ -1690,18 +1739,29 @@ async function handlePageComplete() {
 // --- JSON Export Log ---
 function downloadExportLog(exportData) {
     const jsonStr = JSON.stringify(exportData, null, 2);
-    const blob = new Blob([jsonStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
 
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'HSBC_Export_Log.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    log('Export log saved: HSBC_Export_Log.json');
+    // Send to background.js to download with proper subfolder path
+    chrome.runtime.sendMessage({
+        action: 'download_json_log',
+        content: jsonStr,
+        filename: 'HSBC_Export_Log.json'
+    }, (response) => {
+        if (response && response.success) {
+            log('Export log saved to HSBC_Exports folder');
+        } else {
+            // Fallback to blob download if background fails
+            log('Fallback: saving to Downloads root');
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'HSBC_Export_Log.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    });
 }
 
 // --- Completion Modal ---
@@ -1713,77 +1773,81 @@ function showCompletionModal(summary) {
     const { completed, failed, cancelled, duration, dateRange } = summary;
     const totalProcessed = completed.length + failed.length;
 
-    let statusIcon, statusColor, statusText;
+    let statusIcon, statusColor, statusText, statusBg;
     if (cancelled) {
-        statusIcon = '⊘';
-        statusColor = '#f59e0b';
+        statusIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:28px;height:28px;"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>`;
+        statusColor = '#d97706';
+        statusBg = '#fffbeb';
         statusText = 'Export Cancelled';
     } else if (failed.length > 0) {
-        statusIcon = '⚠';
-        statusColor = '#f59e0b';
+        statusIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:28px;height:28px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`;
+        statusColor = '#dc2626';
+        statusBg = '#fef2f2';
         statusText = 'Export Completed with Errors';
     } else {
-        statusIcon = '✓';
-        statusColor = '#10b981';
-        statusText = 'Export Completed Successfully';
+        statusIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="width:28px;height:28px;"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>`;
+        statusColor = '#059669';
+        statusBg = '#ecfdf5';
+        statusText = 'Export Completed';
     }
 
     const modal = document.createElement('div');
     modal.id = 'hsbc-completion-modal';
     modal.innerHTML = `
-        <div style="position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); z-index:2147483647; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease-out;">
-            <div style="background:white; padding:32px; border-radius:16px; min-width:400px; max-width:500px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; animation:modalSlideIn 0.3s ease-out;">
-                <div style="text-align:center; margin-bottom:24px;">
-                    <div style="width:64px; height:64px; background:${statusColor}20; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:32px;">
-                        <span style="color:${statusColor};">${statusIcon}</span>
+        <div style="position:fixed; inset:0; background:rgba(0,0,0,0.4); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); z-index:2147483647; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease-out;">
+            <div style="background:white; padding:28px; border-radius:12px; min-width:380px; max-width:460px; box-shadow:0 20px 40px rgba(0,0,0,0.15); font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; animation:modalSlideIn 0.3s ease-out;">
+                <div style="text-align:center; margin-bottom:20px;">
+                    <div style="width:56px; height:56px; background:${statusBg}; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 14px; color:${statusColor};">
+                        ${statusIcon}
                     </div>
-                    <h2 style="margin:0; color:#111827; font-size:20px; font-weight:700;">${statusText}</h2>
-                    <p style="margin:8px 0 0; color:#6b7280; font-size:14px;">${dateRange}</p>
+                    <h2 style="margin:0; color:#111827; font-size:18px; font-weight:600;">${statusText}</h2>
+                    <p style="margin:6px 0 0; color:#6b7280; font-size:13px;">${dateRange}</p>
                 </div>
 
-                <div style="background:#f9fafb; border-radius:12px; padding:16px; margin-bottom:24px;">
-                    <div style="display:grid; grid-template-columns:1fr 1fr ${failed.length > 0 ? '1fr' : ''}; gap:16px; text-align:center;">
+                <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:14px; margin-bottom:20px;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr ${failed.length > 0 ? '1fr' : ''}; gap:12px; text-align:center;">
                         <div>
-                            <div style="font-size:28px; font-weight:700; color:#10b981;">${completed.length}</div>
-                            <div style="font-size:12px; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px;">Completed</div>
+                            <div style="font-size:24px; font-weight:700; color:#10b981;">${completed.length}</div>
+                            <div style="font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:0.3px; font-weight:500;">Completed</div>
                         </div>
                         ${failed.length > 0 ? `
-                        <div>
-                            <div style="font-size:28px; font-weight:700; color:#ef4444;">${failed.length}</div>
-                            <div style="font-size:12px; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px;">Failed</div>
+                        <div style="border-left:1px solid #e5e7eb; border-right:1px solid #e5e7eb;">
+                            <div style="font-size:24px; font-weight:700; color:#ef4444;">${failed.length}</div>
+                            <div style="font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:0.3px; font-weight:500;">Failed</div>
                         </div>
                         ` : ''}
                         <div>
-                            <div style="font-size:28px; font-weight:700; color:#3b82f6;">${duration}</div>
-                            <div style="font-size:12px; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px;">Duration</div>
+                            <div style="font-size:24px; font-weight:700; color:#3b82f6;">${duration}</div>
+                            <div style="font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:0.3px; font-weight:500;">Duration</div>
                         </div>
                     </div>
                 </div>
 
                 ${failed.length > 0 ? `
-                <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:12px; margin-bottom:24px; max-height:120px; overflow-y:auto;">
-                    <div style="font-size:12px; font-weight:600; color:#991b1b; margin-bottom:8px;">Failed Accounts:</div>
-                    ${failed.map(f => `<div style="font-size:11px; color:#7f1d1d; padding:2px 0;">${f.accountTitle} (${f.accountNumber})</div>`).join('')}
+                <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:6px; padding:10px 12px; margin-bottom:20px; max-height:100px; overflow-y:auto;">
+                    <div style="font-size:11px; font-weight:600; color:#991b1b; margin-bottom:6px;">Failed Accounts:</div>
+                    ${failed.slice(0, 3).map(f => `<div style="font-size:11px; color:#7f1d1d; padding:2px 0;">${f.accountTitle} (${f.accountNumber})</div>`).join('')}
+                    ${failed.length > 3 ? `<div style="font-size:11px; color:#991b1b; padding:2px 0; font-weight:500;">...and ${failed.length - 3} more</div>` : ''}
                 </div>
                 ` : ''}
 
-                <div style="display:flex; justify-content:center; gap:12px;">
+                <div style="display:flex; justify-content:center;">
                     <button id="completion-close-btn" style="
-                        padding:12px 32px;
+                        padding:10px 28px;
                         border:none;
-                        background:linear-gradient(135deg, #db0011 0%, #a50000 100%);
+                        background:#db0011;
                         color:white;
-                        border-radius:8px;
+                        border-radius:6px;
                         cursor:pointer;
-                        font-size:14px;
+                        font-size:13px;
                         font-weight:600;
                         font-family:inherit;
-                        box-shadow:0 2px 8px rgba(219,0,17,0.25);
-                        transition:all 0.2s ease;
+                        box-shadow:0 1px 3px rgba(0,0,0,0.1);
+                        transition:all 0.15s ease;
                     ">Close</button>
                 </div>
 
-                <p style="text-align:center; margin:16px 0 0; color:#9ca3af; font-size:11px;">
+                <p style="text-align:center; margin:14px 0 0; color:#9ca3af; font-size:10px;">
                     Export log saved as HSBC_Export_Log.json
                 </p>
             </div>
@@ -1795,14 +1859,14 @@ function showCompletionModal(summary) {
     // Close button handler
     const closeBtn = document.getElementById('completion-close-btn');
     closeBtn.onmouseover = () => {
-        closeBtn.style.background = 'linear-gradient(135deg, #ff1a2f 0%, #db0011 100%)';
+        closeBtn.style.background = '#c50010';
         closeBtn.style.transform = 'translateY(-1px)';
-        closeBtn.style.boxShadow = '0 4px 12px rgba(219,0,17,0.35)';
+        closeBtn.style.boxShadow = '0 4px 8px rgba(219,0,17,0.2)';
     };
     closeBtn.onmouseout = () => {
-        closeBtn.style.background = 'linear-gradient(135deg, #db0011 0%, #a50000 100%)';
+        closeBtn.style.background = '#db0011';
         closeBtn.style.transform = 'translateY(0)';
-        closeBtn.style.boxShadow = '0 2px 8px rgba(219,0,17,0.25)';
+        closeBtn.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
     };
     closeBtn.onclick = () => modal.remove();
 

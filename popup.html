@@ -10,78 +10,150 @@
         }
 
         body {
-            width: 400px;
+            width: 380px;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+            background: #f8fafc;
         }
 
-        /* Header - Softer Design */
+        /* Header - Clean Professional */
         .header {
-            background: linear-gradient(135deg, #ffffff 0%, #fef2f2 100%);
-            padding: 20px 24px;
+            background: #ffffff;
+            padding: 16px 20px;
             display: flex;
             align-items: center;
-            gap: 14px;
-            border-bottom: 1px solid rgba(219, 0, 17, 0.08);
+            gap: 12px;
+            border-bottom: 1px solid #e5e7eb;
         }
 
         .header img {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
         }
 
         .header-text h1 {
-            font-size: 17px;
-            font-weight: 700;
+            font-size: 15px;
+            font-weight: 600;
             color: #111827;
-            margin-bottom: 2px;
+            margin-bottom: 1px;
         }
 
         .header-text span {
-            font-size: 13px;
+            font-size: 12px;
             color: #6b7280;
             font-weight: 500;
         }
 
+        .version-badge {
+            margin-left: auto;
+            font-size: 10px;
+            font-weight: 600;
+            color: #6b7280;
+            background: #f3f4f6;
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            padding: 12px 16px;
+            background: #ffffff;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .open-hsbc-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 10px 16px;
+            background: #db0011;
+            border: none;
+            border-radius: 6px;
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .open-hsbc-btn:hover {
+            background: #c50010;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(219, 0, 17, 0.25);
+        }
+
+        .open-hsbc-btn:active {
+            background: #a50000;
+            transform: translateY(0);
+            box-shadow: none;
+        }
+
+        .open-hsbc-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
         /* Content Area */
         .content {
-            padding: 20px;
+            padding: 16px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding: 0 2px;
         }
 
         .section-title {
             font-size: 11px;
-            font-weight: 700;
-            color: #9ca3af;
+            font-weight: 600;
+            color: #6b7280;
             text-transform: uppercase;
-            letter-spacing: 0.8px;
-            margin-bottom: 16px;
-            padding-left: 4px;
+            letter-spacing: 0.5px;
+        }
+
+        .clear-link {
+            font-size: 11px;
+            font-weight: 500;
+            color: #9ca3af;
+            text-decoration: none;
+            cursor: pointer;
+            transition: color 0.15s ease;
+        }
+
+        .clear-link:hover {
+            color: #ef4444;
         }
 
         /* History List */
         .history-list {
-            max-height: 440px;
+            max-height: 340px;
             overflow-y: auto;
-            padding-right: 4px;
         }
 
-        /* Modern Card Design */
+        /* Compact Card Design */
         .history-item {
-            background: white;
-            border-radius: 12px;
-            padding: 16px 18px;
-            margin-bottom: 12px;
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-bottom: 8px;
             position: relative;
-            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.04), 0 2px 4px rgba(0, 0, 0, 0.06);
-            border-left: 4px solid #10b981;
-            transition: all 0.2s ease;
+            border: 1px solid #e5e7eb;
+            border-left: 3px solid #10b981;
+            transition: all 0.15s ease;
         }
 
         .history-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-color: #d1d5db;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+        }
+
+        .history-item:last-child {
+            margin-bottom: 0;
         }
 
         .history-item.cancelled {
@@ -92,132 +164,171 @@
             border-left-color: #ef4444;
         }
 
-        /* Status Badge */
-        .history-item::after {
-            content: '';
-            position: absolute;
-            top: 14px;
-            right: 14px;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #10b981;
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+        /* Card Header Row */
+        .history-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
         }
 
-        .history-item.cancelled::after {
-            background: #f59e0b;
-            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
-        }
-
-        .history-item.has-failures::after {
-            background: #ef4444;
-            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
-        }
-
-        /* Date Header */
         .history-date {
             font-size: 11px;
             color: #9ca3af;
-            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 10px;
             font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .status-badge.success {
+            background: #ecfdf5;
+            color: #059669;
+        }
+
+        .status-badge.warning {
+            background: #fffbeb;
+            color: #d97706;
+        }
+
+        .status-badge.error {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        .status-badge svg {
+            width: 10px;
+            height: 10px;
         }
 
         /* Date Range */
         .history-range {
-            font-size: 15px;
-            font-weight: 700;
+            font-size: 14px;
+            font-weight: 600;
             color: #111827;
-            margin-bottom: 12px;
-            font-family: 'SF Mono', Monaco, monospace;
+            margin-bottom: 8px;
         }
 
         /* Statistics Row */
         .history-stats {
             display: flex;
-            gap: 16px;
-            font-size: 13px;
-            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 12px;
         }
 
         .stat {
             display: flex;
             align-items: center;
-            gap: 5px;
-            font-weight: 600;
+            gap: 4px;
+            font-weight: 500;
+            color: #6b7280;
         }
 
-        .stat-success { color: #10b981; }
-        .stat-failed { color: #ef4444; }
-        .stat-duration { color: #6b7280; }
+        .stat svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        .stat-success svg { color: #10b981; }
+        .stat-failed svg { color: #ef4444; }
+        .stat-duration svg { color: #6b7280; }
 
         /* Empty State */
         .empty-state {
             text-align: center;
-            padding: 60px 20px;
-            color: #9ca3af;
+            padding: 48px 20px;
+            background: #ffffff;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
         }
 
-        .empty-state svg {
-            width: 56px;
-            height: 56px;
-            margin-bottom: 16px;
-            opacity: 0.3;
-            stroke: #db0011;
+        .empty-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 12px;
+            background: #fef2f2;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .empty-icon svg {
+            width: 24px;
+            height: 24px;
+            color: #db0011;
+            opacity: 0.6;
         }
 
         .empty-state p {
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        /* Clear Button */
-        .clear-btn {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            margin-top: 16px;
-            background: white;
-            border: 2px solid #e5e7eb;
-            border-radius: 10px;
-            color: #6b7280;
             font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
+            font-weight: 500;
+            color: #6b7280;
+            margin-bottom: 4px;
         }
 
-        .clear-btn:hover {
-            border-color: #fecaca;
-            background: #fef2f2;
-            color: #db0011;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        .empty-state span {
+            font-size: 12px;
+            color: #9ca3af;
         }
 
-        .clear-btn:active {
-            transform: translateY(0);
+        /* Footer */
+        .footer {
+            padding: 12px 16px;
+            background: #ffffff;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .footer-info {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: #9ca3af;
+        }
+
+        .footer-info svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #10b981;
+        }
+
+        .status-dot.inactive {
+            background: #9ca3af;
         }
 
         /* Custom Scrollbar */
         .history-list::-webkit-scrollbar {
-            width: 6px;
+            width: 4px;
         }
 
         .history-list::-webkit-scrollbar-track {
             background: transparent;
-            margin: 4px 0;
         }
 
         .history-list::-webkit-scrollbar-thumb {
-            background: rgba(0, 0, 0, 0.15);
-            border-radius: 3px;
+            background: #d1d5db;
+            border-radius: 2px;
         }
 
         .history-list::-webkit-scrollbar-thumb:hover {
-            background: rgba(0, 0, 0, 0.25);
+            background: #9ca3af;
         }
     </style>
 </head>
@@ -226,21 +337,51 @@
         <img src="ICON.png" alt="HSBC Bot">
         <div class="header-text">
             <h1>HSBC Bot Companion</h1>
-            <span>Export History</span>
+            <span>Banking Automation</span>
         </div>
+        <span class="version-badge">v2.3</span>
     </div>
+
+    <div class="quick-actions">
+        <button id="open-hsbc-btn" class="open-hsbc-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+            Open HSBCnet Portal
+        </button>
+    </div>
+
     <div class="content">
-        <div class="section-title">Recent Exports</div>
+        <div class="section-header">
+            <span class="section-title">Export History</span>
+            <a id="clear-btn" class="clear-link" style="display:none;">Clear</a>
+        </div>
         <div id="history-list" class="history-list">
             <div class="empty-state">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
+                <div class="empty-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                </div>
                 <p>No exports yet</p>
+                <span>Run an export to see history here</span>
             </div>
         </div>
-        <button id="clear-btn" class="clear-btn" style="display:none;">Clear History</button>
     </div>
+
+    <div class="footer">
+        <div class="footer-info">
+            <div class="status-dot"></div>
+            <span>Extension active</span>
+        </div>
+        <div class="footer-info">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Keep Alive ON</span>
+        </div>
+    </div>
+
     <script src="popup.js"></script>
 </body>
 </html>

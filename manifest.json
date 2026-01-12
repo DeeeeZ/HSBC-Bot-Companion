@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "HSBC Bot Companion",
-  "version": "2.1",
+  "version": "2.3",
   "description": "Automates tasks on HSBC Net: Batch export, smart file naming, and Excel export helper.",
   "icons": {
     "16": "ICON.png",
