@@ -13,13 +13,14 @@ Chrome extension (Manifest V3) automating HSBCnet banking portal workflows. Desi
 - **Smart File Naming** - Downloads organized into `HSBC_Exports/YYYY-MM-DD/` subfolder, renamed to `{Title}_{AccountNumber}_{Currency}_{DateFrom}_TO_{DateTo}.xlsx`
 - **RPA Status Polling** - `data-status` attribute (`idle`/`exporting`/`done`/`error`) for PAD integration
 - **Keep Alive** - Prevents 5-min session timeout with activity simulation every 1 min (ON by default)
+- **Keyboard Shortcuts** - `Alt+Shift+E` for Export All, `Alt+Shift+X` for Auto Export
 - Download-triggered auto-close of redirect windows
 
 ## Architecture
 
 ```
-content.js      → DOM injection, UI automation, Export All loop, Smart Wait (~1950 lines)
-background.js   → Service worker: download events, file renaming, tab management (~180 lines)
+content.js      → DOM injection, UI automation, Export All loop, Smart Wait (~2000 lines)
+background.js   → Service worker: download events, file renaming, keyboard shortcuts (~210 lines)
 popup.js        → Export history display from Chrome storage
 manifest.json   → Extension config, permissions
 ```
@@ -180,6 +181,15 @@ function ExecuteScript() {
 ```
 
 **PAD Flow:** Trigger → Loop (wait 1-2s → poll → exit if `done`/`error`)
+
+## Keyboard Shortcuts
+
+| Shortcut | Action | Page |
+|----------|--------|------|
+| `Alt+Shift+E` | Trigger Export All | Accounts List |
+| `Alt+Shift+X` | Trigger Auto Export | Account Details |
+
+Shortcuts can be customized in Chrome: `chrome://extensions/shortcuts`
 
 ## Export All Outputs
 

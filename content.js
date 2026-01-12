@@ -969,6 +969,62 @@ async function injectExportAllButton() {
 
     }
 
+    // Add keyboard shortcut hint next to page title
+    const pageTitle = document.querySelector('#innerPage > div > div > div > div.account-information > section.page-main__panel > div.page-main__panel-title-wrap > h1');
+    if (pageTitle && !document.getElementById('hsbc-bot-shortcut-hint')) {
+        const hint = document.createElement('span');
+        hint.id = 'hsbc-bot-shortcut-hint';
+        hint.innerHTML = '<kbd>Alt</kbd> <kbd>Shift</kbd> <kbd>E</kbd> to start Export';
+        hint.title = 'Press Alt+Shift+E to trigger Export All';
+        hint.style.cssText = `
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: 20px;
+            padding: 10px 18px;
+            background: linear-gradient(135deg, #db0011 0%, #a8000d 100%);
+            border: 2px solid #db0011;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            font-family: inherit;
+            color: #fff;
+            letter-spacing: 0.3px;
+            box-shadow: 0 4px 12px rgba(219, 0, 17, 0.3);
+            cursor: pointer;
+            vertical-align: middle;
+            transition: all 0.2s ease;
+        `;
+
+        // Style the kbd elements
+        const kbdStyle = `
+            display: inline-block;
+            padding: 4px 8px;
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 2px 0 rgba(0,0,0,0.2);
+        `;
+        hint.querySelectorAll('kbd').forEach(kbd => kbd.style.cssText = kbdStyle);
+
+        hint.onmouseover = () => {
+            hint.style.transform = 'scale(1.05)';
+            hint.style.boxShadow = '0 6px 16px rgba(219, 0, 17, 0.4)';
+        };
+        hint.onmouseout = () => {
+            hint.style.transform = 'scale(1)';
+            hint.style.boxShadow = '0 4px 12px rgba(219, 0, 17, 0.3)';
+        };
+        hint.onclick = () => {
+            const exportAllBtn = document.getElementById('hsbc-bot-export-all-btn');
+            if (exportAllBtn) exportAllBtn.click();
+        };
+        pageTitle.appendChild(hint);
+    }
+
     // Keep Alive checkbox - inject into right toolbar next to Subtotal row
     const rightToolbar = document.querySelector('ul.table-actions__group--right-ai');
     if (rightToolbar && !document.getElementById('hsbc-bot-keep-alive-btn')) {
@@ -1006,7 +1062,7 @@ async function injectExportAllButton() {
 
                 log("Keep Alive: Ping");
             }, 60000); // 1 minute
-            log("Keep Alive: ON (pinging every 1 min)");
+            // Keep Alive started silently
         }
 
         const label = document.createElement('label');
@@ -1060,7 +1116,7 @@ function toggleKeepAlive() {
 
             log("Keep Alive: Ping");
         }, 60000); // 1 minute
-        log("Keep Alive: ON (pinging every 1 min)");
+        // Keep Alive started silently
     }
     updateKeepAliveButton();
 }
@@ -1989,5 +2045,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         btn.style.color = '#fff';
         btn.style.borderColor = '#28a745';
         clearCurrentExportAccount();
+    }
+
+    // Keyboard shortcut: Export All (Alt+Shift+E)
+    if (message.action === "keyboard_export_all") {
+        log("Keyboard shortcut: Export All");
+        const exportAllBtn = document.getElementById('hsbc-bot-export-all-btn');
+        if (exportAllBtn) {
+            exportAllBtn.click();
+        } else {
+            log("Export All button not found - are you on the Accounts List page?");
+        }
+    }
+
+    // Keyboard shortcut: Auto Export (Alt+Shift+X)
+    if (message.action === "keyboard_auto_export") {
+        log("Keyboard shortcut: Auto Export");
+        const autoExportBtn = document.getElementById('hsbc-bot-export-btn');
+        if (autoExportBtn) {
+            autoExportBtn.click();
+        } else {
+            log("Auto Export button not found - are you on an Account Details page?");
+        }
     }
 }); 

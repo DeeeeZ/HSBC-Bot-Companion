@@ -2,6 +2,32 @@
 
 console.log("HSBC Bot Background Service Worker Loaded");
 
+// --- Keyboard Shortcuts ---
+chrome.commands.onCommand.addListener((command) => {
+    console.log("[HSBC Bot] Command received:", command);
+
+    // Find active HSBC tab and send command
+    chrome.tabs.query({ active: true, currentWindow: true, url: "*://*.hsbcnet.com/*" }, (tabs) => {
+        if (tabs.length === 0) {
+            console.log("[HSBC Bot] No active HSBC tab found");
+            return;
+        }
+
+        const tab = tabs[0];
+        console.log("[HSBC Bot] Sending command to tab:", tab.id);
+
+        if (command === "trigger-export-all") {
+            chrome.tabs.sendMessage(tab.id, { action: "keyboard_export_all" }).catch(err => {
+                console.log("[HSBC Bot] Failed to send command:", err);
+            });
+        } else if (command === "trigger-auto-export") {
+            chrome.tabs.sendMessage(tab.id, { action: "keyboard_auto_export" }).catch(err => {
+                console.log("[HSBC Bot] Failed to send command:", err);
+            });
+        }
+    });
+});
+
 // --- Download Context for File Renaming ---
 let pendingDownloadContext = null;
 let pendingJsonDownload = null; // For JSON log file
