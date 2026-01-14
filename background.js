@@ -214,3 +214,126 @@ chrome.downloads.onCreated.addListener((downloadItem) => {
         });
     });
 });
+
+// === NATIVE MESSAGING FOR RECONCILIATION ===
+
+const NATIVE_HOST_NAME = "com.hsbc.bot.recon";
+
+/**
+ * Check if native messaging host is available.
+ * Sends a ping command and waits for response.
+ */
+async function checkNativeHostAvailable() {
+    return new Promise((resolve) => {
+        try {
+            const port = chrome.runtime.connectNative(NATIVE_HOST_NAME);
+
+            const timeout = setTimeout(() => {
+                port.disconnect();
+                resolve({ available: false, error: "Connection timeout" });
+            }, 5000);
+
+            port.onMessage.addListener((response) => {
+                clearTimeout(timeout);
+                port.disconnect();
+                resolve({
+                    available: response.success === true,
+                    version: response.version,
+                    checks: response.checks
+                });
+            });
+
+            port.onDisconnect.addListener(() => {
+                clearTimeout(timeout);
+                const error = chrome.runtime.lastError;
+                resolve({
+                    available: false,
+                    error: error ? error.message : "Host disconnected"
+                });
+            });
+
+            port.postMessage({ command: "ping" });
+        } catch (e) {
+            resolve({ available: false, error: e.message });
+        }
+    });
+}
+
+/**
+ * Run reconciliation via native messaging host.
+ * @param {Object} options - Options to pass to reconciliation
+ * @param {Function} callback - Callback with result
+ */
+function runReconciliation(options, callback) {
+    console.log("[HSBC Bot] Starting reconciliation via native host...");
+
+    try {
+        const port = chrome.runtime.connectNative(NATIVE_HOST_NAME);
+
+        // 30 minute timeout for long-running reconciliation
+        const timeout = setTimeout(() => {
+            console.log("[HSBC Bot] Native host timeout");
+            port.disconnect();
+            callback({
+                success: false,
+                error: "Reconciliation timed out after 30 minutes",
+                errorCode: "TIMEOUT"
+            });
+        }, 1800000);
+
+        port.onMessage.addListener((response) => {
+            console.log("[HSBC Bot] Native host response:", response);
+            clearTimeout(timeout);
+            port.disconnect();
+            callback(response);
+        });
+
+        port.onDisconnect.addListener(() => {
+            clearTimeout(timeout);
+            const error = chrome.runtime.lastError;
+            console.log("[HSBC Bot] Native host disconnected:", error);
+            callback({
+                success: false,
+                error: error ? error.message : "Native host disconnected unexpectedly",
+                errorCode: "DISCONNECTED"
+            });
+        });
+
+        // Send reconciliation command
+        port.postMessage({
+            command: "run_reconciliation",
+            bank: options.bank || "HSBC",
+            options: options
+        });
+
+    } catch (e) {
+        console.log("[HSBC Bot] Native host connection error:", e);
+        callback({
+            success: false,
+            error: e.message,
+            errorCode: "CONNECTION_ERROR"
+        });
+    }
+}
+
+// Handle native messaging requests from content script
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    // Check native host availability
+    if (message.action === "check_native_host") {
+        console.log("[HSBC Bot] Checking native host availability...");
+        checkNativeHostAvailable().then(result => {
+            console.log("[HSBC Bot] Native host check result:", result);
+            sendResponse(result);
+        });
+        return true; // Keep channel open for async response
+    }
+
+    // Run reconciliation
+    if (message.action === "run_reconciliation") {
+        console.log("[HSBC Bot] Running reconciliation with options:", message.options);
+        runReconciliation(message.options || {}, (result) => {
+            sendResponse(result);
+        });
+        return true; // Keep channel open for async response
+    }
+});

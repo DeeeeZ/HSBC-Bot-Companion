@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "HSBC Bot Companion",
-  "version": "2.4",
-  "description": "Automates tasks on HSBC Net: Batch export, smart file naming, and Excel export helper.",
+  "version": "2.5",
+  "description": "Automates tasks on HSBC Net: Batch export, smart file naming, Excel export helper, and bank reconciliation.",
   "icons": {
     "16": "ICON.png",
     "48": "ICON.png",
@@ -11,7 +11,8 @@
   "permissions": [
     "activeTab",
     "downloads",
-    "storage"
+    "storage",
+    "nativeMessaging"
   ],
   "host_permissions": [
     "*://*.hsbcnet.com/*"

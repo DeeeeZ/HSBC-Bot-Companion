@@ -1,0 +1,9 @@
+﻿{
+    "path":  "C:\\Users\\ASUS\\OneDrive\\Projects\\RealFZE\\Tools\\HSBC_Bot_Companion\\native-host\\recon_host.bat",
+    "description":  "HSBC Bot Companion - Bank Reconciliation Native Host",
+    "name":  "com.hsbc.bot.recon",
+    "allowed_origins":  [
+                            "chrome-extension://naboemepamfhjnmhnjnkikmcghfmdjkh/"
+                        ],
+    "type":  "stdio"
+}

@@ -3,6 +3,12 @@
 const HISTORY_KEY = 'hsbc_export_history';
 const HSBC_LOGIN_URL = 'https://www2.secure.hsbcnet.com/uims/dl/DSP_AUTHENTICATION';
 
+// === Reconciliation State ===
+let reconState = {
+    status: 'checking', // checking, available, unavailable, running, success, error
+    result: null
+};
+
 function formatDuration(ms) {
     if (!ms) return '-';
     const seconds = Math.floor(ms / 1000);
@@ -103,6 +109,128 @@ function renderHistory(history) {
     }).join('');
 }
 
+// === Reconciliation Functions ===
+
+function updateReconUI() {
+    const btn = document.getElementById('recon-btn');
+    const btnText = document.getElementById('recon-btn-text');
+    const status = document.getElementById('recon-status');
+
+    // Reset classes
+    btn.classList.remove('unavailable');
+    status.className = 'recon-status';
+
+    switch (reconState.status) {
+        case 'checking':
+            btn.style.display = 'none';
+            status.className = 'recon-status checking';
+            status.innerHTML = `
+                <div class="spinner-small"></div>
+                <span>Checking reconciliation service...</span>
+            `;
+            break;
+
+        case 'available':
+            btn.style.display = 'flex';
+            btn.disabled = false;
+            btnText.textContent = 'Run Reconciliation';
+            status.className = 'recon-status';
+            status.innerHTML = '';
+            break;
+
+        case 'unavailable':
+            btn.style.display = 'flex';
+            btn.classList.add('unavailable');
+            btn.disabled = true;
+            btnText.textContent = 'Service Not Installed';
+            status.className = 'recon-status';
+            status.innerHTML = '';
+            break;
+
+        case 'running':
+            btn.style.display = 'flex';
+            btn.disabled = true;
+            btnText.textContent = 'Running...';
+            status.className = 'recon-status running';
+            status.innerHTML = `
+                <div class="spinner-small"></div>
+                <span>Running bank reconciliation...</span>
+            `;
+            break;
+
+        case 'success':
+            const r = reconState.result || {};
+            const matched = r.steps?.reconciliation?.matched ?? '?';
+            const time = r.total_time_seconds ? `${Math.round(r.total_time_seconds)}s` : '';
+            btn.style.display = 'flex';
+            btn.disabled = false;
+            btnText.textContent = 'Run Again';
+            status.className = 'recon-status success';
+            status.innerHTML = `
+                <div class="status-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    Reconciliation Complete
+                </div>
+                <div class="status-detail">${matched} transactions matched${time ? ` in ${time}` : ''}</div>
+            `;
+            break;
+
+        case 'error':
+            const err = reconState.result || {};
+            btn.style.display = 'flex';
+            btn.disabled = false;
+            btnText.textContent = 'Retry';
+            status.className = 'recon-status error';
+            status.innerHTML = `
+                <div class="status-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    Reconciliation Failed
+                </div>
+                <div class="status-detail">${err.error || 'Unknown error'}</div>
+            `;
+            break;
+    }
+}
+
+function checkNativeHost() {
+    reconState.status = 'checking';
+    updateReconUI();
+
+    chrome.runtime.sendMessage({ action: 'check_native_host' }, (response) => {
+        if (chrome.runtime.lastError) {
+            reconState.status = 'unavailable';
+        } else if (response && response.available) {
+            reconState.status = 'available';
+        } else {
+            reconState.status = 'unavailable';
+        }
+        updateReconUI();
+    });
+}
+
+function runReconciliation() {
+    reconState.status = 'running';
+    reconState.result = null;
+    updateReconUI();
+
+    chrome.runtime.sendMessage(
+        { action: 'run_reconciliation', options: { bank: 'HSBC' } },
+        (response) => {
+            if (chrome.runtime.lastError) {
+                reconState.status = 'error';
+                reconState.result = { error: chrome.runtime.lastError.message };
+            } else if (response && response.success) {
+                reconState.status = 'success';
+                reconState.result = response;
+            } else {
+                reconState.status = 'error';
+                reconState.result = response || { error: 'Unknown error' };
+            }
+            updateReconUI();
+        }
+    );
+}
+
 // Load history on popup open
 document.addEventListener('DOMContentLoaded', () => {
     // Load export history
@@ -123,4 +251,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     });
+
+    // Reconciliation button
+    document.getElementById('recon-btn').addEventListener('click', () => {
+        if (reconState.status === 'available' || reconState.status === 'success' || reconState.status === 'error') {
+            runReconciliation();
+        }
+    });
+
+    // Check native host availability on popup open
+    checkNativeHost();
 });

@@ -1820,6 +1820,163 @@ function downloadExportLog(exportData) {
     });
 }
 
+// --- Reconciliation State & Functions ---
+let reconState = {
+    status: 'idle',  // idle, checking, running, success, error, unavailable
+    result: null
+};
+
+// Check native host availability
+async function checkReconAvailability() {
+    return new Promise((resolve) => {
+        chrome.runtime.sendMessage({ action: "check_native_host" }, (response) => {
+            if (chrome.runtime.lastError) {
+                resolve(false);
+            } else {
+                resolve(response?.available === true);
+            }
+        });
+    });
+}
+
+// Trigger reconciliation via background script
+function triggerReconciliation() {
+    reconState.status = 'running';
+    reconState.result = null;
+    updateReconUI();
+
+    chrome.runtime.sendMessage(
+        { action: "run_reconciliation", options: { bank: "HSBC" } },
+        (response) => {
+            if (chrome.runtime.lastError) {
+                reconState.status = 'error';
+                reconState.result = { error: chrome.runtime.lastError.message };
+            } else if (response && response.success) {
+                reconState.status = 'success';
+                reconState.result = response;
+                log(`Reconciliation complete: ${response.steps?.reconciliation?.matched || 0} matched`);
+            } else {
+                reconState.status = 'error';
+                reconState.result = response || { error: 'Unknown error' };
+            }
+            updateReconUI();
+        }
+    );
+}
+
+// Update reconciliation UI in modal
+function updateReconUI() {
+    const reconArea = document.getElementById('recon-status-area');
+    const reconBtn = document.getElementById('recon-run-btn');
+
+    if (!reconArea) return;
+
+    switch (reconState.status) {
+        case 'checking':
+            reconArea.innerHTML = `
+                <div style="display:flex; align-items:center; gap:8px; color:#6b7280; justify-content:center;">
+                    <div class="hsbc-spinner-small"></div>
+                    <span style="font-size:12px;">Checking reconciliation service...</span>
+                </div>
+            `;
+            if (reconBtn) reconBtn.style.display = 'none';
+            break;
+
+        case 'unavailable':
+            reconArea.innerHTML = `
+                <div style="color:#9ca3af; font-size:11px; text-align:center;">
+                    Reconciliation service not installed
+                </div>
+            `;
+            if (reconBtn) reconBtn.style.display = 'none';
+            break;
+
+        case 'running':
+            reconArea.innerHTML = `
+                <div style="display:flex; align-items:center; gap:8px; color:#3b82f6; justify-content:center;">
+                    <div class="hsbc-spinner-small"></div>
+                    <span style="font-size:12px;">Running bank reconciliation...</span>
+                </div>
+            `;
+            if (reconBtn) {
+                reconBtn.disabled = true;
+                reconBtn.style.opacity = '0.6';
+                reconBtn.style.cursor = 'not-allowed';
+                reconBtn.textContent = 'Running...';
+            }
+            break;
+
+        case 'success':
+            const r = reconState.result || {};
+            const matched = r.steps?.reconciliation?.matched ?? '?';
+            const time = r.total_time_seconds ? `${Math.round(r.total_time_seconds)}s` : '';
+            reconArea.innerHTML = `
+                <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:6px; padding:10px 12px;">
+                    <div style="display:flex; align-items:center; gap:6px; color:#059669; font-weight:600; font-size:13px; margin-bottom:4px; justify-content:center;">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                        Reconciliation Complete
+                    </div>
+                    <div style="font-size:11px; color:#047857; text-align:center;">
+                        ${matched} transactions matched${time ? ` in ${time}` : ''}
+                    </div>
+                </div>
+            `;
+            if (reconBtn) reconBtn.style.display = 'none';
+            break;
+
+        case 'error':
+            const err = reconState.result || {};
+            reconArea.innerHTML = `
+                <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:6px; padding:10px 12px;">
+                    <div style="display:flex; align-items:center; gap:6px; color:#dc2626; font-weight:600; font-size:13px; margin-bottom:4px; justify-content:center;">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                        Reconciliation Failed
+                    </div>
+                    <div style="font-size:10px; color:#991b1b; text-align:center; word-break:break-word;">${err.error || 'Unknown error'}</div>
+                </div>
+            `;
+            if (reconBtn) {
+                reconBtn.disabled = false;
+                reconBtn.style.opacity = '1';
+                reconBtn.style.cursor = 'pointer';
+                reconBtn.textContent = 'Retry';
+                reconBtn.style.display = 'inline-block';
+            }
+            break;
+
+        default: // idle
+            reconArea.innerHTML = '';
+            if (reconBtn) {
+                reconBtn.disabled = false;
+                reconBtn.style.opacity = '1';
+                reconBtn.style.cursor = 'pointer';
+                reconBtn.textContent = 'Run Reconciliation';
+                reconBtn.style.display = 'inline-block';
+            }
+    }
+}
+
+// Inject spinner styles for reconciliation UI
+function injectReconStyles() {
+    if (document.getElementById('hsbc-recon-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'hsbc-recon-styles';
+    style.textContent = `
+        .hsbc-spinner-small {
+            width: 14px;
+            height: 14px;
+            border: 2px solid #e5e7eb;
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: hsbc-spin 0.8s linear infinite;
+        }
+        @keyframes hsbc-spin {
+            to { transform: rotate(360deg); }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
 // --- Completion Modal ---
 function showCompletionModal(summary) {
     // Remove existing modal if any
@@ -1887,7 +2044,22 @@ function showCompletionModal(summary) {
                 </div>
                 ` : ''}
 
-                <div style="display:flex; justify-content:center;">
+                <div id="recon-status-area" style="margin-bottom:12px; min-height:20px;"></div>
+
+                <div style="display:flex; justify-content:center; gap:10px;">
+                    <button id="recon-run-btn" style="
+                        padding:10px 20px;
+                        border:2px solid #3b82f6;
+                        background:#eff6ff;
+                        color:#1d4ed8;
+                        border-radius:6px;
+                        cursor:pointer;
+                        font-size:13px;
+                        font-weight:600;
+                        font-family:inherit;
+                        transition:all 0.15s ease;
+                        display:none;
+                    ">Run Reconciliation</button>
                     <button id="completion-close-btn" style="
                         padding:10px 28px;
                         border:none;
@@ -1912,6 +2084,9 @@ function showCompletionModal(summary) {
 
     document.body.appendChild(modal);
 
+    // Inject spinner styles
+    injectReconStyles();
+
     // Close button handler
     const closeBtn = document.getElementById('completion-close-btn');
     closeBtn.onmouseover = () => {
@@ -1925,6 +2100,34 @@ function showCompletionModal(summary) {
         closeBtn.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
     };
     closeBtn.onclick = () => modal.remove();
+
+    // Reconciliation button handler
+    const reconBtn = document.getElementById('recon-run-btn');
+    reconBtn.onmouseover = () => {
+        if (!reconBtn.disabled) {
+            reconBtn.style.background = '#dbeafe';
+            reconBtn.style.transform = 'translateY(-1px)';
+        }
+    };
+    reconBtn.onmouseout = () => {
+        if (!reconBtn.disabled) {
+            reconBtn.style.background = '#eff6ff';
+            reconBtn.style.transform = 'translateY(0)';
+        }
+    };
+    reconBtn.onclick = () => {
+        if (!reconBtn.disabled) {
+            triggerReconciliation();
+        }
+    };
+
+    // Check native host availability
+    reconState = { status: 'checking', result: null };
+    updateReconUI();
+    checkReconAvailability().then(available => {
+        reconState.status = available ? 'idle' : 'unavailable';
+        updateReconUI();
+    });
 
     // Close on overlay click
     modal.firstElementChild.onclick = (e) => {
