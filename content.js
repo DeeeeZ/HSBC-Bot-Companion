@@ -1851,13 +1851,27 @@ function triggerReconciliation() {
             if (chrome.runtime.lastError) {
                 reconState.status = 'error';
                 reconState.result = { error: chrome.runtime.lastError.message };
-            } else if (response && response.success) {
-                reconState.status = 'success';
-                reconState.result = response;
-                log(`Reconciliation complete: ${response.steps?.reconciliation?.matched || 0} matched`);
+            } else if (response) {
+                // Check if reconciliation produced matches (partial or full success)
+                const matched = response.steps?.reconciliation?.matched;
+                const failed = response.steps?.reconciliation?.failed || 0;
+
+                if (matched > 0) {
+                    // Has matches - show as success (with warning if some failed)
+                    reconState.status = failed > 0 ? 'warning' : 'success';
+                    reconState.result = response;
+                    log(`Reconciliation complete: ${matched} matched, ${failed} failed`);
+                } else if (response.success) {
+                    reconState.status = 'success';
+                    reconState.result = response;
+                    log(`Reconciliation complete: 0 matched`);
+                } else {
+                    reconState.status = 'error';
+                    reconState.result = response;
+                }
             } else {
                 reconState.status = 'error';
-                reconState.result = response || { error: 'Unknown error' };
+                reconState.result = { error: 'No response from native host' };
             }
             updateReconUI();
         }
@@ -1924,15 +1938,39 @@ function updateReconUI() {
             if (reconBtn) reconBtn.style.display = 'none';
             break;
 
+        case 'warning':
+            const w = reconState.result || {};
+            const wMatched = w.steps?.reconciliation?.matched ?? 0;
+            const wFailed = w.steps?.reconciliation?.failed ?? 0;
+            const wTime = w.total_time_seconds ? `${Math.round(w.total_time_seconds)}s` : '';
+            reconArea.innerHTML = `
+                <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:10px 12px;">
+                    <div style="display:flex; align-items:center; gap:6px; color:#d97706; font-weight:600; font-size:13px; margin-bottom:4px; justify-content:center;">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                        Reconciliation Complete
+                    </div>
+                    <div style="font-size:11px; color:#b45309; text-align:center;">
+                        ${wMatched} matched, ${wFailed} accounts failed${wTime ? ` (${wTime})` : ''}
+                    </div>
+                </div>
+            `;
+            if (reconBtn) reconBtn.style.display = 'none';
+            break;
+
         case 'error':
             const err = reconState.result || {};
+            // Extract error message from various possible locations
+            let errorMsg = err.error
+                || (err.errors && err.errors.length > 0 ? err.errors[0] : null)
+                || (err.steps?.reconciliation?.failures?.[0]?.error)
+                || 'Unknown error';
             reconArea.innerHTML = `
                 <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:6px; padding:10px 12px;">
                     <div style="display:flex; align-items:center; gap:6px; color:#dc2626; font-weight:600; font-size:13px; margin-bottom:4px; justify-content:center;">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                         Reconciliation Failed
                     </div>
-                    <div style="font-size:10px; color:#991b1b; text-align:center; word-break:break-word;">${err.error || 'Unknown error'}</div>
+                    <div style="font-size:10px; color:#991b1b; text-align:center; word-break:break-word;">${errorMsg}</div>
                 </div>
             `;
             if (reconBtn) {

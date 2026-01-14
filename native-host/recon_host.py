@@ -27,15 +27,47 @@ from pathlib import Path
 from datetime import datetime
 
 # === CONFIGURATION ===
-# BankRecon engine directory (run_all.py must be run from here)
-BANKRECON_DIR = Path(r"C:\Users\ASUS\Desktop\Recon Project\Matching Files\BNP")
-RUN_ALL_SCRIPT = BANKRECON_DIR / "BankRecon_Python_Engine" / "run_all.py"
+
+# Config file path (relative to this script)
+SCRIPT_DIR = Path(__file__).parent
+CONFIG_FILE = SCRIPT_DIR / "config.json"
+
+# Default values (used if config.json missing or invalid)
+DEFAULT_BANKRECON_DIR = Path(r"C:\Users\ASUS\Desktop\Recon Project\Matching Files\BNP")
+DEFAULT_RUN_ALL_SCRIPT = "BankRecon_Python_Engine\\run_all.py"
 
 # Timeout for reconciliation (30 minutes - can take a while for many accounts)
 TIMEOUT_SECONDS = 1800
 
 # Version info
-VERSION = "1.0.0"
+VERSION = "1.1.1"
+
+
+def load_config():
+    """
+    Load configuration from config.json.
+    Returns tuple of (bankrecon_dir: Path, run_all_script: Path, error: str|None)
+    """
+    if not CONFIG_FILE.exists():
+        return DEFAULT_BANKRECON_DIR, DEFAULT_BANKRECON_DIR / DEFAULT_RUN_ALL_SCRIPT, "config.json not found, using defaults"
+
+    try:
+        with open(CONFIG_FILE, 'r', encoding='utf-8-sig') as f:
+            config = json.load(f)
+
+        bankrecon_dir = Path(config.get("bankrecon_dir", str(DEFAULT_BANKRECON_DIR)))
+        run_all_script_rel = config.get("run_all_script", DEFAULT_RUN_ALL_SCRIPT)
+        run_all_script = bankrecon_dir / run_all_script_rel
+
+        return bankrecon_dir, run_all_script, None
+    except json.JSONDecodeError as e:
+        return DEFAULT_BANKRECON_DIR, DEFAULT_BANKRECON_DIR / DEFAULT_RUN_ALL_SCRIPT, f"config.json parse error: {e}"
+    except Exception as e:
+        return DEFAULT_BANKRECON_DIR, DEFAULT_BANKRECON_DIR / DEFAULT_RUN_ALL_SCRIPT, f"config load error: {e}"
+
+
+# Load configuration
+BANKRECON_DIR, RUN_ALL_SCRIPT, CONFIG_ERROR = load_config()
 
 
 # === NATIVE MESSAGING PROTOCOL ===
@@ -81,20 +113,23 @@ def send_error(error_message, error_code="UNKNOWN_ERROR"):
 
 def extract_json_result(output: str) -> dict:
     """
-    Extract JSON result from script output between markers.
+    Extract the LAST JSON result from script output between markers.
 
     run_all.py outputs JSON between JSON_RESULT_START and JSON_RESULT_END markers.
+    Multiple sub-scripts may output their own markers, so we need the LAST one
+    which is the final summary from run_all.py.
     """
-    match = re.search(
+    matches = re.findall(
         r'JSON_RESULT_START\s*(.*?)\s*JSON_RESULT_END',
         output,
         re.DOTALL
     )
-    if match:
+    if matches:
+        # Take the LAST match (run_all.py's final output)
         try:
-            return json.loads(match.group(1))
+            return json.loads(matches[-1])
         except json.JSONDecodeError as e:
-            return {"parseError": str(e), "rawMatch": match.group(1)[:500]}
+            return {"parseError": str(e), "rawMatch": matches[-1][:500]}
     return None
 
 
@@ -203,8 +238,12 @@ def run_reconciliation(bank="HSBC", options=None):
 def handle_ping():
     """Health check - verify host is running and configured correctly."""
     checks = {
+        "configFile": CONFIG_FILE.exists(),
+        "configError": CONFIG_ERROR,
         "bankReconDir": BANKRECON_DIR.exists(),
+        "bankReconDirPath": str(BANKRECON_DIR),
         "runAllScript": RUN_ALL_SCRIPT.exists(),
+        "runAllScriptPath": str(RUN_ALL_SCRIPT),
         "pythonVersion": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
     }
 

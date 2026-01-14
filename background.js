@@ -331,9 +331,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Run reconciliation
     if (message.action === "run_reconciliation") {
         console.log("[HSBC Bot] Running reconciliation with options:", message.options);
+        // Mark as running
+        chrome.storage.local.set({ recon_running: true, recon_result: null });
         runReconciliation(message.options || {}, (result) => {
+            // Store result and clear running flag
+            chrome.storage.local.set({ recon_running: false, recon_result: result });
+            // Notify any open popups
+            chrome.runtime.sendMessage({ action: "recon_complete", result }).catch(() => {});
             sendResponse(result);
         });
         return true; // Keep channel open for async response
+    }
+
+    // Check if reconciliation is running (for popup reopening)
+    if (message.action === "check_recon_status") {
+        chrome.storage.local.get(['recon_running', 'recon_result'], (data) => {
+            sendResponse(data);
+        });
+        return true;
     }
 });

@@ -200,14 +200,17 @@ The extension can trigger the BankRecon Python engine after export completes via
 ### Setup (One-Time)
 
 ```powershell
-# 1. Get your extension ID from chrome://extensions (Developer mode ON)
+# Option 1: Double-click setup.bat for interactive menu with auto-detection
 
-# 2. Run the installer
+# Option 2: Command line
 cd native-host
-.\install.ps1 -ExtensionId "your-32-char-extension-id"
-
-# 3. Reload the extension in Chrome
+.\install.ps1                    # Interactive menu
+.\install.ps1 -Status            # Check installation status
+.\install.ps1 -Uninstall         # Remove installation
+.\install.ps1 -ExtensionId "id"  # Install with specific ID
 ```
+
+The installer auto-detects extension ID from Chrome/Edge and registers for both browsers.
 
 ### Architecture
 
@@ -229,9 +232,24 @@ cd native-host
 
 | File                         | Purpose                                      |
 | ---------------------------- | -------------------------------------------- |
+| `native-host/setup.bat`      | Double-click installer (runs PowerShell)     |
+| `native-host/install.ps1`    | Installer with menu, auto-detect, status     |
 | `native-host/recon_host.py`  | Native messaging host (receives commands)    |
-| `native-host/install.ps1`    | Registry setup script (run once)             |
+| `native-host/config.json`    | BankRecon path configuration                 |
 | `native-host/com.hsbc.bot.recon.json` | Host manifest (auto-generated)      |
+
+### Configuration File
+
+The `config.json` stores the BankRecon project path:
+
+```json
+{
+  "bankrecon_dir": "C:\\Users\\ASUS\\Desktop\\Recon Project\\Matching Files\\BNP",
+  "run_all_script": "BankRecon_Python_Engine\\run_all.py"
+}
+```
+
+Configure via installer menu option [4] or edit directly.
 
 ### Native Messaging Protocol
 
@@ -268,10 +286,11 @@ cd native-host
 
 | Issue                          | Fix                                                   |
 | ------------------------------ | ----------------------------------------------------- |
-| "Service not installed"        | Run `install.ps1` with correct extension ID           |
-| "Connection failed"            | Check registry: `HKCU:\Software\Google\Chrome\NativeMessagingHosts\com.hsbc.bot.recon` |
+| "Service not installed"        | Double-click `setup.bat` and select Install           |
+| "Connection failed"            | Run `setup.bat -Status` to check registry entries     |
 | "Python not found"             | Ensure Python is in PATH                              |
-| "Script not found"             | Check `BANKRECON_DIR` path in `recon_host.py`         |
+| "BankRecon dir not found"      | Run `setup.bat` → [4] Configure Paths                 |
+| "run_all.py not found"         | Check `config.json` has correct BankRecon path        |
 | Button not showing             | Reload extension + refresh page                       |
 
 ## Keyboard Shortcuts
