@@ -63,7 +63,7 @@ function initLogger() {
         <div id="hsbc-logger-panel" style="
             background: rgba(17, 24, 39, 0.96);
             border: 1px solid rgba(75, 85, 99, 0.3);
-            border-radius: 8px;
+            border-radius: 0;
             padding: 10px 12px;
             min-width: 260px;
             max-width: 360px;
@@ -101,7 +101,7 @@ function initLogger() {
                     padding: 2px 6px;
                     font-size: 14px;
                     line-height: 1;
-                    border-radius: 4px;
+                    border-radius: 0;
                     transition: all 0.15s;
                 " title="Minimize">−</button>
             </div>
@@ -113,7 +113,7 @@ function initLogger() {
             display: none;
             background: rgba(17, 24, 39, 0.96);
             border: 1px solid rgba(75, 85, 99, 0.3);
-            border-radius: 8px;
+            border-radius: 0;
             padding: 8px 12px;
             color: rgba(255,255,255,0.92);
             box-shadow: 0 4px 16px rgba(0,0,0,0.3);
@@ -246,14 +246,14 @@ function createProgressBar() {
         <div style="display:flex; justify-content:space-between; align-items:center; gap:24px; max-width:1200px; margin:0 auto;">
             <div style="min-width:200px;">
                 <div id="progress-text" style="font-size:15px; font-weight:700; color:#111827; display:flex; align-items:center; gap:8px;">
-                    <span style="width:3px; height:16px; background:linear-gradient(180deg, #db0011 0%, #ff4444 100%); border-radius:2px;"></span>
+                    <span style="width:3px; height:16px; background:#db0011;"></span>
                     Exporting... 0/0
                 </div>
                 <div id="progress-current" style="color:#6b7280; font-size:13px; margin-top:4px; font-weight:500;">Starting...</div>
             </div>
             <div style="flex:1; max-width:500px; position:relative;">
-                <div style="background:rgba(0,0,0,0.06); height:8px; border-radius:8px; overflow:hidden;">
-                    <div id="progress-fill" style="background:linear-gradient(90deg, #db0011 0%, #ff4444 100%); height:100%; width:0%; transition:width 0.5s cubic-bezier(0.16,1,0.3,1); border-radius:8px; box-shadow:0 0 8px rgba(219,0,17,0.3); position:relative; overflow:hidden;">
+                <div style="background:rgba(0,0,0,0.06); height:6px; overflow:hidden;">
+                    <div id="progress-fill" style="background:linear-gradient(90deg, #db0011 0%, #ff4444 100%); height:100%; width:0%; transition:width 0.5s cubic-bezier(0.16,1,0.3,1); box-shadow:0 0 8px rgba(219,0,17,0.3); position:relative; overflow:hidden;">
                         <div style="position:absolute; top:0; left:0; right:0; bottom:0; background:linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%); animation:shimmer 2s infinite;"></div>
                     </div>
                 </div>
@@ -264,7 +264,7 @@ function createProgressBar() {
                 border: 2px solid #fecaca;
                 padding: 10px 20px;
                 cursor: pointer;
-                border-radius: 8px;
+                border-radius: 0;
                 font-weight: 600;
                 font-size: 14px;
                 font-family: inherit;
@@ -342,15 +342,14 @@ function injectCheckboxes() {
             .hsbc-select-checkbox, .hsbc-select-all {
                 appearance: none;
                 -webkit-appearance: none;
-                width: 18px;
-                height: 18px;
+                width: 16px;
+                height: 16px;
                 border: 2px solid #d1d5db;
-                border-radius: 5px;
+                border-radius: 0;
                 background: white;
                 cursor: pointer;
                 position: relative;
                 transition: all 0.15s ease;
-                box-shadow: 0 1px 2px rgba(0,0,0,0.05);
             }
             .hsbc-select-checkbox:hover, .hsbc-select-all:hover {
                 border-color: #db0011;
@@ -358,15 +357,14 @@ function injectCheckboxes() {
                 transform: scale(1.05);
             }
             .hsbc-select-checkbox:checked, .hsbc-select-all:checked {
-                background: linear-gradient(135deg, #db0011 0%, #ff4444 100%);
+                background: #db0011;
                 border-color: #db0011;
-                box-shadow: 0 2px 6px rgba(219,0,17,0.3);
             }
             .hsbc-select-checkbox:checked::after, .hsbc-select-all:checked::after {
                 content: '';
                 position: absolute;
-                left: 5px;
-                top: 1px;
+                left: 4px;
+                top: 0px;
                 width: 4px;
                 height: 9px;
                 border: solid white;
@@ -560,114 +558,110 @@ function showDateModal() {
         const modal = document.createElement('div');
         modal.id = 'hsbc-date-modal';
         modal.innerHTML = `
-            <div style="position:fixed; inset:0; background:rgba(0,0,0,0.4); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); z-index:2147483647; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease-out;">
-                <div style="background:white; padding:32px; border-radius:16px; min-width:480px; box-shadow:0 0 0 1px rgba(0,0,0,0.05), 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; animation:modalSlideIn 0.3s ease-out;">
-                    <h3 style="margin:0 0 24px; color:#111827; font-size:20px; font-weight:700; display:flex; align-items:center; gap:10px;">
-                        <span style="width:4px; height:24px; background:linear-gradient(180deg, #db0011 0%, #ff4444 100%); border-radius:2px;"></span>
+            <div style="position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); z-index:2147483647; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease-out;">
+                <div style="background:white; padding:28px; min-width:440px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.15); font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; animation:modalSlideIn 0.3s ease-out;">
+                    <h3 style="margin:0 0 20px; color:#111827; font-size:18px; font-weight:700; display:flex; align-items:center; gap:10px;">
+                        <span style="width:3px; height:20px; background:#db0011;"></span>
                         Select Date Range
                     </h3>
 
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;">
                         <button class="date-preset-btn" data-preset="yesterday" style="
-                            padding:14px 18px;
-                            border:2px solid #e5e7eb;
+                            padding:12px 16px;
+                            border:1px solid #e5e7eb;
                             background:white;
                             color:#374151;
-                            border-radius:10px;
+                            border-radius:0;
                             cursor:pointer;
-                            font-size:14px;
+                            font-size:13px;
                             font-weight:600;
                             font-family:inherit;
-                            transition:all 0.2s ease;
+                            transition:all 0.15s ease;
                             text-align:left;
-                            box-shadow:0 1px 2px rgba(0,0,0,0.05);
                         ">Yesterday</button>
                         <button class="date-preset-btn" data-preset="last7" style="
-                            padding:14px 18px;
-                            border:2px solid #e5e7eb;
+                            padding:12px 16px;
+                            border:1px solid #e5e7eb;
                             background:white;
                             color:#374151;
-                            border-radius:10px;
+                            border-radius:0;
                             cursor:pointer;
-                            font-size:14px;
+                            font-size:13px;
                             font-weight:600;
                             font-family:inherit;
-                            transition:all 0.2s ease;
+                            transition:all 0.15s ease;
                             text-align:left;
-                            box-shadow:0 1px 2px rgba(0,0,0,0.05);
                         ">Last 7 Days</button>
                         <button class="date-preset-btn" data-preset="lastMonth" style="
-                            padding:14px 18px;
-                            border:2px solid #e5e7eb;
+                            padding:12px 16px;
+                            border:1px solid #e5e7eb;
                             background:white;
                             color:#374151;
-                            border-radius:10px;
+                            border-radius:0;
                             cursor:pointer;
-                            font-size:14px;
+                            font-size:13px;
                             font-weight:600;
                             font-family:inherit;
-                            transition:all 0.2s ease;
+                            transition:all 0.15s ease;
                             text-align:left;
-                            box-shadow:0 1px 2px rgba(0,0,0,0.05);
                         ">Last Month</button>
                         <button class="date-preset-btn" data-preset="mtd" style="
-                            padding:14px 18px;
-                            border:2px solid #e5e7eb;
+                            padding:12px 16px;
+                            border:1px solid #e5e7eb;
                             background:white;
                             color:#374151;
-                            border-radius:10px;
+                            border-radius:0;
                             cursor:pointer;
-                            font-size:14px;
+                            font-size:13px;
                             font-weight:600;
                             font-family:inherit;
-                            transition:all 0.2s ease;
+                            transition:all 0.15s ease;
                             text-align:left;
-                            box-shadow:0 1px 2px rgba(0,0,0,0.05);
                         ">Month to Date</button>
                     </div>
 
-                    <div style="border-top:2px solid #f3f4f6; padding-top:20px; margin-bottom:24px;">
-                        <label style="display:block; color:#6b7280; font-size:13px; margin-bottom:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Custom Range</label>
-                        <div style="display:flex; gap:16px; align-items:center;">
+                    <div style="border-top:1px solid #e5e7eb; padding-top:16px; margin-bottom:20px;">
+                        <label style="display:block; color:#6b7280; font-size:11px; margin-bottom:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Custom Range</label>
+                        <div style="display:flex; gap:12px; align-items:center;">
                             <div style="flex:1;">
-                                <label style="font-size:12px; color:#9ca3af; display:block; margin-bottom:6px; font-weight:500;">From</label>
+                                <label style="font-size:11px; color:#9ca3af; display:block; margin-bottom:4px; font-weight:500;">From</label>
                                 <input type="text" id="modal-start" placeholder="dd/mm/yyyy" style="
                                     width:100%;
-                                    padding:12px 14px;
-                                    border:2px solid #e5e7eb;
-                                    border-radius:8px;
-                                    font-size:14px;
+                                    padding:10px 12px;
+                                    border:1px solid #e5e7eb;
+                                    border-radius:0;
+                                    font-size:13px;
                                     font-family:inherit;
                                     color:#111827;
                                     box-sizing:border-box;
-                                    transition:all 0.2s ease;
+                                    transition:all 0.15s ease;
                                 ">
                             </div>
-                            <span style="color:#d1d5db; font-size:18px; margin-top:20px;">→</span>
+                            <span style="color:#d1d5db; font-size:16px; margin-top:18px;">→</span>
                             <div style="flex:1;">
-                                <label style="font-size:12px; color:#9ca3af; display:block; margin-bottom:6px; font-weight:500;">To</label>
+                                <label style="font-size:11px; color:#9ca3af; display:block; margin-bottom:4px; font-weight:500;">To</label>
                                 <input type="text" id="modal-end" placeholder="dd/mm/yyyy" style="
                                     width:100%;
-                                    padding:12px 14px;
-                                    border:2px solid #e5e7eb;
-                                    border-radius:8px;
-                                    font-size:14px;
+                                    padding:10px 12px;
+                                    border:1px solid #e5e7eb;
+                                    border-radius:0;
+                                    font-size:13px;
                                     font-family:inherit;
                                     color:#111827;
                                     box-sizing:border-box;
-                                    transition:all 0.2s ease;
+                                    transition:all 0.15s ease;
                                 ">
                             </div>
                         </div>
                     </div>
 
-                    <div style="display:flex; justify-content:flex-end; gap:12px;">
+                    <div style="display:flex; justify-content:flex-end; gap:10px;">
                         <button id="modal-cancel" style="
-                            padding:10px 24px;
+                            padding:10px 20px;
                             border:1px solid #d1d5db;
                             background:#ffffff;
                             color:#6b7280;
-                            border-radius:6px;
+                            border-radius:0;
                             cursor:pointer;
                             font-size:13px;
                             font-weight:600;
@@ -675,16 +669,15 @@ function showDateModal() {
                             transition:all 0.15s ease;
                         ">Cancel</button>
                         <button id="modal-start-export" style="
-                            padding:10px 24px;
+                            padding:10px 20px;
                             border:none;
                             background:#db0011;
                             color:white;
-                            border-radius:6px;
+                            border-radius:0;
                             cursor:pointer;
                             font-size:13px;
                             font-weight:600;
                             font-family:inherit;
-                            box-shadow:0 1px 3px rgba(0,0,0,0.1);
                             transition:all 0.15s ease;
                         ">Start Export</button>
                     </div>
@@ -946,8 +939,8 @@ async function injectExportAllButton() {
             border: 1px solid #ccc;
             padding: 8px 16px;
             cursor: pointer;
-            font-weight: 500;
-            border-radius: 4px;
+            font-weight: 600;
+            border-radius: 0;
             font-size: 13px;
             font-family: inherit;
             transition: all 0.15s ease;
@@ -982,41 +975,37 @@ async function injectExportAllButton() {
             gap: 6px;
             margin-left: 20px;
             padding: 10px 18px;
-            background: linear-gradient(135deg, #db0011 0%, #a8000d 100%);
+            background: #db0011;
             border: 2px solid #db0011;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 700;
+            border-radius: 0;
+            font-size: 14px;
+            font-weight: 600;
             font-family: inherit;
             color: #fff;
             letter-spacing: 0.3px;
-            box-shadow: 0 4px 12px rgba(219, 0, 17, 0.3);
             cursor: pointer;
             vertical-align: middle;
-            transition: all 0.2s ease;
+            transition: all 0.15s ease;
         `;
 
         // Style the kbd elements
         const kbdStyle = `
             display: inline-block;
-            padding: 4px 8px;
+            padding: 3px 6px;
             background: rgba(255,255,255,0.2);
             border: 1px solid rgba(255,255,255,0.3);
-            border-radius: 4px;
+            border-radius: 0;
             font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 600;
-            box-shadow: 0 2px 0 rgba(0,0,0,0.2);
         `;
         hint.querySelectorAll('kbd').forEach(kbd => kbd.style.cssText = kbdStyle);
 
         hint.onmouseover = () => {
-            hint.style.transform = 'scale(1.05)';
-            hint.style.boxShadow = '0 6px 16px rgba(219, 0, 17, 0.4)';
+            hint.style.background = '#b91c1c';
         };
         hint.onmouseout = () => {
-            hint.style.transform = 'scale(1)';
-            hint.style.boxShadow = '0 4px 12px rgba(219, 0, 17, 0.3)';
+            hint.style.background = '#db0011';
         };
         hint.onclick = () => {
             const exportAllBtn = document.getElementById('hsbc-bot-export-all-btn');
@@ -1152,9 +1141,9 @@ async function injectButton() {
             cursor: pointer;
             margin-left: 12px;
             padding: 8px 16px;
-            border-radius: 4px;
+            border-radius: 0;
             font-size: 13px;
-            font-weight: 500;
+            font-weight: 600;
             font-family: inherit;
             transition: all 0.15s ease;
         `;
@@ -1925,12 +1914,12 @@ function updateReconUI() {
             const matched = r.steps?.reconciliation?.matched ?? '?';
             const time = r.total_time_seconds ? `${Math.round(r.total_time_seconds)}s` : '';
             reconArea.innerHTML = `
-                <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:6px; padding:10px 12px;">
-                    <div style="display:flex; align-items:center; gap:6px; color:#059669; font-weight:600; font-size:13px; margin-bottom:4px; justify-content:center;">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                <div style="background:#ecfdf5; border:1px solid #a7f3d0; padding:10px 12px;">
+                    <div style="display:flex; align-items:center; gap:6px; color:#059669; font-weight:600; font-size:12px; margin-bottom:4px; justify-content:center;">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
                         Reconciliation Complete
                     </div>
-                    <div style="font-size:11px; color:#047857; text-align:center;">
+                    <div style="font-size:10px; color:#047857; text-align:center;">
                         ${matched} transactions matched${time ? ` in ${time}` : ''}
                     </div>
                 </div>
@@ -1944,12 +1933,12 @@ function updateReconUI() {
             const wFailed = w.steps?.reconciliation?.failed ?? 0;
             const wTime = w.total_time_seconds ? `${Math.round(w.total_time_seconds)}s` : '';
             reconArea.innerHTML = `
-                <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:10px 12px;">
-                    <div style="display:flex; align-items:center; gap:6px; color:#d97706; font-weight:600; font-size:13px; margin-bottom:4px; justify-content:center;">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                <div style="background:#fffbeb; border:1px solid #fde68a; padding:10px 12px;">
+                    <div style="display:flex; align-items:center; gap:6px; color:#d97706; font-weight:600; font-size:12px; margin-bottom:4px; justify-content:center;">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                         Reconciliation Complete
                     </div>
-                    <div style="font-size:11px; color:#b45309; text-align:center;">
+                    <div style="font-size:10px; color:#b45309; text-align:center;">
                         ${wMatched} matched, ${wFailed} accounts failed${wTime ? ` (${wTime})` : ''}
                     </div>
                 </div>
@@ -1965,9 +1954,9 @@ function updateReconUI() {
                 || (err.steps?.reconciliation?.failures?.[0]?.error)
                 || 'Unknown error';
             reconArea.innerHTML = `
-                <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:6px; padding:10px 12px;">
-                    <div style="display:flex; align-items:center; gap:6px; color:#dc2626; font-weight:600; font-size:13px; margin-bottom:4px; justify-content:center;">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                <div style="background:#fef2f2; border:1px solid #fecaca; padding:10px 12px;">
+                    <div style="display:flex; align-items:center; gap:6px; color:#dc2626; font-weight:600; font-size:12px; margin-bottom:4px; justify-content:center;">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                         Reconciliation Failed
                     </div>
                     <div style="font-size:10px; color:#991b1b; text-align:center; word-break:break-word;">${errorMsg}</div>
@@ -2046,16 +2035,16 @@ function showCompletionModal(summary) {
     modal.id = 'hsbc-completion-modal';
     modal.innerHTML = `
         <div style="position:fixed; inset:0; background:rgba(0,0,0,0.4); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); z-index:2147483647; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease-out;">
-            <div style="background:white; padding:28px; border-radius:12px; min-width:380px; max-width:460px; box-shadow:0 20px 40px rgba(0,0,0,0.15); font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; animation:modalSlideIn 0.3s ease-out;">
-                <div style="text-align:center; margin-bottom:20px;">
-                    <div style="width:56px; height:56px; background:${statusBg}; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 14px; color:${statusColor};">
+            <div style="background:white; padding:24px; min-width:360px; max-width:440px; box-shadow:0 20px 40px rgba(0,0,0,0.15); font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; animation:modalSlideIn 0.3s ease-out;">
+                <div style="text-align:center; margin-bottom:18px;">
+                    <div style="width:48px; height:48px; background:${statusBg}; display:flex; align-items:center; justify-content:center; margin:0 auto 12px; color:${statusColor};">
                         ${statusIcon}
                     </div>
-                    <h2 style="margin:0; color:#111827; font-size:18px; font-weight:600;">${statusText}</h2>
-                    <p style="margin:6px 0 0; color:#6b7280; font-size:13px;">${dateRange}</p>
+                    <h2 style="margin:0; color:#111827; font-size:16px; font-weight:600;">${statusText}</h2>
+                    <p style="margin:4px 0 0; color:#6b7280; font-size:12px;">${dateRange}</p>
                 </div>
 
-                <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:14px; margin-bottom:20px;">
+                <div style="background:#f9fafb; border:1px solid #e5e7eb; padding:12px; margin-bottom:16px;">
                     <div style="display:grid; grid-template-columns:1fr 1fr ${failed.length > 0 ? '1fr' : ''}; gap:12px; text-align:center;">
                         <div>
                             <div style="font-size:24px; font-weight:700; color:#10b981;">${completed.length}</div>
@@ -2075,40 +2064,39 @@ function showCompletionModal(summary) {
                 </div>
 
                 ${failed.length > 0 ? `
-                <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:6px; padding:10px 12px; margin-bottom:20px; max-height:100px; overflow-y:auto;">
-                    <div style="font-size:11px; font-weight:600; color:#991b1b; margin-bottom:6px;">Failed Accounts:</div>
-                    ${failed.slice(0, 3).map(f => `<div style="font-size:11px; color:#7f1d1d; padding:2px 0;">${f.accountTitle} (${f.accountNumber})</div>`).join('')}
-                    ${failed.length > 3 ? `<div style="font-size:11px; color:#991b1b; padding:2px 0; font-weight:500;">...and ${failed.length - 3} more</div>` : ''}
+                <div style="background:#fef2f2; border:1px solid #fecaca; padding:10px 12px; margin-bottom:16px; max-height:80px; overflow-y:auto;">
+                    <div style="font-size:10px; font-weight:600; color:#991b1b; margin-bottom:4px;">Failed Accounts:</div>
+                    ${failed.slice(0, 3).map(f => `<div style="font-size:10px; color:#7f1d1d; padding:2px 0;">${f.accountTitle} (${f.accountNumber})</div>`).join('')}
+                    ${failed.length > 3 ? `<div style="font-size:10px; color:#991b1b; padding:2px 0; font-weight:500;">...and ${failed.length - 3} more</div>` : ''}
                 </div>
                 ` : ''}
 
-                <div id="recon-status-area" style="margin-bottom:12px; min-height:20px;"></div>
+                <div id="recon-status-area" style="margin-bottom:10px; min-height:16px;"></div>
 
                 <div style="display:flex; justify-content:center; gap:10px;">
                     <button id="recon-run-btn" style="
                         padding:10px 20px;
-                        border:2px solid #3b82f6;
+                        border:1px solid #3b82f6;
                         background:#eff6ff;
                         color:#1d4ed8;
-                        border-radius:6px;
+                        border-radius:0;
                         cursor:pointer;
-                        font-size:13px;
+                        font-size:12px;
                         font-weight:600;
                         font-family:inherit;
                         transition:all 0.15s ease;
                         display:none;
                     ">Run Reconciliation</button>
                     <button id="completion-close-btn" style="
-                        padding:10px 28px;
+                        padding:10px 24px;
                         border:none;
                         background:#db0011;
                         color:white;
-                        border-radius:6px;
+                        border-radius:0;
                         cursor:pointer;
-                        font-size:13px;
+                        font-size:12px;
                         font-weight:600;
                         font-family:inherit;
-                        box-shadow:0 1px 3px rgba(0,0,0,0.1);
                         transition:all 0.15s ease;
                     ">Close</button>
                 </div>

@@ -21,8 +21,8 @@ Chrome extension (Manifest V3) automating HSBCnet banking portal workflows. Desi
 ## Architecture
 
 ```
-content.js      → DOM injection, UI automation, Export All loop, Smart Wait, Recon UI (~2150 lines)
-background.js   → Service worker: downloads, file renaming, shortcuts, native messaging (~340 lines)
+content.js      → DOM injection, UI automation, Export All loop, Smart Wait, Recon UI (~2300 lines)
+background.js   → Service worker: downloads, file renaming, shortcuts, native messaging (~350 lines)
 popup.html/js   → Extension popup: export history, reconciliation button
 manifest.json   → Extension config, permissions (includes nativeMessaging)
 native-host/    → Native Messaging Host for bank reconciliation (Python)
@@ -235,6 +235,7 @@ The installer auto-detects extension ID from Chrome/Edge and registers for both 
 | `native-host/setup.bat`      | Double-click installer (runs PowerShell)     |
 | `native-host/install.ps1`    | Installer with menu, auto-detect, status     |
 | `native-host/recon_host.py`  | Native messaging host (receives commands)    |
+| `native-host/recon_host.bat` | Batch wrapper to launch Python host          |
 | `native-host/config.json`    | BankRecon path configuration                 |
 | `native-host/com.hsbc.bot.recon.json` | Host manifest (auto-generated)      |
 

@@ -43,12 +43,12 @@ function renderHistory(history) {
         container.innerHTML = `
             <div class="empty-state">
                 <div class="empty-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                     </svg>
                 </div>
                 <p>No exports yet</p>
-                <span>Run an export to see history here</span>
+                <span>Export to see history</span>
             </div>
         `;
         clearBtn.style.display = 'none';
@@ -60,37 +60,34 @@ function renderHistory(history) {
     container.innerHTML = history.map(item => {
         const hasFailures = item.failed && item.failed.length > 0;
         const isCancelled = item.cancelled;
-        let statusClass = '';
-        let badgeClass = 'success';
-        let badgeText = 'Complete';
-        let badgeIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>`;
+        let badgeClass = 'badge-success';
+        let badgeText = 'Done';
+        let badgeIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>`;
 
         if (isCancelled) {
-            statusClass = 'cancelled';
-            badgeClass = 'warning';
-            badgeText = 'Cancelled';
-            badgeIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>`;
+            badgeClass = 'badge-warning';
+            badgeText = 'Stopped';
+            badgeIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 7.5A2.25 2.25 0 017.5 5.25h9a2.25 2.25 0 012.25 2.25v9a2.25 2.25 0 01-2.25 2.25h-9a2.25 2.25 0 01-2.25-2.25v-9z" /></svg>`;
         } else if (hasFailures) {
-            statusClass = 'has-failures';
-            badgeClass = 'error';
-            badgeText = `${item.failed.length} Failed`;
-            badgeIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`;
+            badgeClass = 'badge-error';
+            badgeText = `${item.failed.length} Fail`;
+            badgeIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>`;
         }
 
         const dateRange = item.dateRange.from === item.dateRange.to
             ? item.dateRange.from
-            : `${item.dateRange.from} → ${item.dateRange.to}`;
+            : `${item.dateRange.from} - ${item.dateRange.to}`;
 
         return `
-            <div class="history-item ${statusClass}">
-                <div class="history-header">
+            <div class="history-item">
+                <div class="history-top">
                     <span class="history-date">${formatDate(item.timestamp)}</span>
-                    <span class="status-badge ${badgeClass}">${badgeIcon}${badgeText}</span>
+                    <span class="badge ${badgeClass}">${badgeIcon}${badgeText}</span>
                 </div>
                 <div class="history-range">${dateRange}</div>
                 <div class="history-stats">
                     <span class="stat stat-success">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
                         ${item.completed}
                     </span>
                     ${hasFailures ? `
@@ -99,8 +96,8 @@ function renderHistory(history) {
                             ${item.failed.length}
                         </span>
                     ` : ''}
-                    <span class="stat stat-duration">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <span class="stat stat-time">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         ${formatDuration(item.durationMs)}
                     </span>
                 </div>
@@ -118,23 +115,23 @@ function updateReconUI() {
 
     // Reset classes
     btn.classList.remove('unavailable');
-    status.className = 'recon-status';
+    status.className = 'status-banner';
 
     switch (reconState.status) {
         case 'checking':
             btn.style.display = 'none';
-            status.className = 'recon-status checking';
+            status.className = 'status-banner checking';
             status.innerHTML = `
-                <div class="spinner-small"></div>
-                <span>Checking reconciliation service...</span>
+                <div class="spinner"></div>
+                <span>Checking service...</span>
             `;
             break;
 
         case 'available':
             btn.style.display = 'flex';
             btn.disabled = false;
-            btnText.textContent = 'Run Reconciliation';
-            status.className = 'recon-status';
+            btnText.textContent = 'Reconcile';
+            status.className = 'status-banner';
             status.innerHTML = '';
             break;
 
@@ -142,8 +139,8 @@ function updateReconUI() {
             btn.style.display = 'flex';
             btn.classList.add('unavailable');
             btn.disabled = true;
-            btnText.textContent = 'Service Not Installed';
-            status.className = 'recon-status';
+            btnText.textContent = 'Not Installed';
+            status.className = 'status-banner';
             status.innerHTML = '';
             break;
 
@@ -151,10 +148,10 @@ function updateReconUI() {
             btn.style.display = 'flex';
             btn.disabled = true;
             btnText.textContent = 'Running...';
-            status.className = 'recon-status running';
+            status.className = 'status-banner running';
             status.innerHTML = `
-                <div class="spinner-small"></div>
-                <span>Running bank reconciliation...</span>
+                <div class="spinner"></div>
+                <span>Reconciling transactions...</span>
             `;
             break;
 
@@ -165,13 +162,13 @@ function updateReconUI() {
             btn.style.display = 'flex';
             btn.disabled = false;
             btnText.textContent = 'Run Again';
-            status.className = 'recon-status success';
+            status.className = 'status-banner success';
             status.innerHTML = `
-                <div class="status-title">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
-                    Reconciliation Complete
+                <div class="status-row">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                    <span>Complete</span>
                 </div>
-                <div class="status-detail">${matched} transactions matched${time ? ` in ${time}` : ''}</div>
+                <div class="status-detail">${matched} matched${time ? ` in ${time}` : ''}</div>
             `;
             break;
 
@@ -179,35 +176,35 @@ function updateReconUI() {
             const w = reconState.result || {};
             const wMatched = w.steps?.reconciliation?.matched ?? 0;
             const wFailed = w.steps?.reconciliation?.failed ?? 0;
-            const wTime = w.total_time_seconds ? `${Math.round(w.total_time_seconds)}s` : '';
             btn.style.display = 'flex';
             btn.disabled = false;
             btnText.textContent = 'Run Again';
-            status.className = 'recon-status warning';
+            status.className = 'status-banner warning';
             status.innerHTML = `
-                <div class="status-title">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                    Reconciliation Complete
+                <div class="status-row">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
+                    <span>Partial</span>
                 </div>
-                <div class="status-detail">${wMatched} matched, ${wFailed} accounts failed${wTime ? ` (${wTime})` : ''}</div>
+                <div class="status-detail">${wMatched} ok, ${wFailed} failed</div>
             `;
             break;
 
         case 'error':
             const err = reconState.result || {};
-            // Extract error message from various possible locations
             let errorMsg = err.error
                 || (err.errors && err.errors.length > 0 ? err.errors[0] : null)
                 || (err.steps?.reconciliation?.failures?.[0]?.error)
                 || 'Unknown error';
+            // Truncate long errors
+            if (errorMsg.length > 50) errorMsg = errorMsg.substring(0, 47) + '...';
             btn.style.display = 'flex';
             btn.disabled = false;
             btnText.textContent = 'Retry';
-            status.className = 'recon-status error';
+            status.className = 'status-banner error';
             status.innerHTML = `
-                <div class="status-title">
+                <div class="status-row">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                    Reconciliation Failed
+                    <span>Failed</span>
                 </div>
                 <div class="status-detail">${errorMsg}</div>
             `;
