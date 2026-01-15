@@ -200,6 +200,10 @@ function logError(msg, err) {
     }
 
     logContent.innerHTML += `<div style="padding:2px 0; color:#ef4444;">✕ ${msg}</div>`;
+
+    // Keep last 20 lines (prevent memory bloat)
+    const entries = logContent.querySelectorAll('div');
+    if (entries.length > 20) entries[0].remove();
 }
 
 function logRPA(msg) {
@@ -212,11 +216,144 @@ function logRPA(msg) {
     }
 
     logContent.innerHTML += `<div style="padding:2px 0; color:#a78bfa;">⚡ ${msg}</div>`;
+
+    // Keep last 20 lines (prevent memory bloat)
+    const entries = logContent.querySelectorAll('div');
+    if (entries.length > 20) entries[0].remove();
 }
 
 // --- Configuration ---
 const REDIRECT_URL_KEYWORD = "GIBRfdRedirect";
 const ACCOUNTS_PAGE_HASH_KEYWORD = "/accounts/details/";
+const LOGIN_PAGE_KEYWORD = "DSP_AUTHENTICATION";
+
+// Quick Login Users (hardcoded for UX convenience)
+const QUICK_LOGIN_USERS = [
+    { name: 'Omar', username: 'omar.alkhatib' },
+    { name: 'Jameel', username: 'jameelhad' },
+    { name: 'Deya', username: 'DeyaAldeen' }
+];
+
+// Check if on login page
+function isLoginPage() {
+    return CURRENT_URL.includes(LOGIN_PAGE_KEYWORD);
+}
+
+// --- Quick Login Buttons (Login Page) ---
+let quickLoginInjected = false;
+let twoFAAutoClicked = false;
+
+function injectQuickLoginButtons() {
+    if (!isLoginPage()) return;
+
+    // Check for username input field (first login step)
+    const usernameInput = document.querySelector('input#userid');
+
+    if (usernameInput) {
+        // First page: inject quick login buttons
+        if (quickLoginInjected) return;
+        if (document.getElementById('hsbc-quick-login-container')) return;
+
+        // Find the parent container to inject after
+        const inputContainer = usernameInput.closest('.sc-gHftCv') || usernameInput.parentElement;
+        if (!inputContainer) return;
+
+        // Create container for quick login buttons
+        const container = document.createElement('div');
+        container.id = 'hsbc-quick-login-container';
+        container.style.cssText = `
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            margin-bottom: 8px;
+        `;
+
+        // Create buttons for each user
+        QUICK_LOGIN_USERS.forEach(user => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = user.name;
+            btn.style.cssText = `
+                padding: 8px 16px;
+                border: 1px solid #ccc;
+                background: #fff;
+                color: #333;
+                font-size: 13px;
+                font-weight: 500;
+                font-family: inherit;
+                cursor: pointer;
+                border-radius: 0;
+                transition: all 0.15s ease;
+            `;
+
+            btn.onmouseover = () => {
+                btn.style.background = '#db0011';
+                btn.style.color = '#fff';
+                btn.style.borderColor = '#db0011';
+            };
+            btn.onmouseout = () => {
+                btn.style.background = '#fff';
+                btn.style.color = '#333';
+                btn.style.borderColor = '#ccc';
+            };
+
+            btn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Fill username
+                usernameInput.value = user.username;
+                usernameInput.dispatchEvent(new Event('input', { bubbles: true }));
+                usernameInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+                log(`Quick login: ${user.name}`);
+
+                // Click Continue button after short delay
+                setTimeout(() => {
+                    // Try multiple selectors for the Continue button
+                    const continueBtn = document.querySelector('button[data-test-id="autoTestCDLButton"]') ||
+                                       document.querySelector('button[type="submit"]') ||
+                                       document.querySelector('button.Button__ButtonWrapper-sc-1p7coko-0');
+                    if (continueBtn) {
+                        log('Clicking Continue button');
+                        continueBtn.click();
+                    }
+                }, 300);
+            };
+
+            container.appendChild(btn);
+        });
+
+        // Insert after the input container
+        inputContainer.parentElement.insertBefore(container, inputContainer.nextSibling);
+        quickLoginInjected = true;
+        log('Quick login buttons injected');
+
+    } else {
+        // Second page (2FA): auto-click Continue if present
+        if (twoFAAutoClicked) return;
+
+        // Check if this is the 2FA page (has mobile device section)
+        const isTwoFAPage = document.body.textContent.includes('Your mobile device') ||
+                           document.body.textContent.includes('mobile device') ||
+                           document.body.textContent.includes('authenticate on your mobile');
+
+        if (isTwoFAPage) {
+            const continueBtn = document.querySelector('button[data-test-id="autoTestCDLButton"]') ||
+                               document.querySelector('button[type="submit"]') ||
+                               document.querySelector('button.Button__ButtonWrapper-sc-1p7coko-0');
+
+            if (continueBtn) {
+                twoFAAutoClicked = true;
+                log('2FA page detected - auto-clicking Continue');
+
+                setTimeout(() => {
+                    continueBtn.click();
+                }, 500);
+            }
+        }
+    }
+}
 
 // --- Progress Bar ---
 let progressBar = null;
@@ -903,8 +1040,158 @@ let exportAllState = {
     failed: [],
     startDate: '',       // dd/mm/yyyy
     endDate: '',         // dd/mm/yyyy
-    startTime: null      // For duration tracking
+    startTime: null,     // For duration tracking
+    refreshCount: 0      // FIX 2: Track page refreshes for memory management
 };
+
+// === FIX 2: State Persistence for Page Refresh ===
+const EXPORT_SESSION_KEY = 'hsbc_export_session';
+const ACCOUNTS_PER_REFRESH = 25; // Refresh page every N accounts to free memory
+const MAX_REFRESH_COUNT = 15;    // Abort if too many refreshes without progress
+
+// Save export session state to Chrome storage
+function saveExportState() {
+    const sessionData = {
+        sessionId: `export_${exportAllState.startTime}`,
+        isRunning: exportAllState.isRunning,
+        isSelectiveExport: exportAllState.isSelectiveExport,
+        dateRange: {
+            from: exportAllState.startDate,
+            to: exportAllState.endDate
+        },
+        // Store account numbers only (account objects can't be serialized with row elements)
+        allAccountNumbers: exportAllState.accounts.map(a => ({
+            number: a.number,
+            title: a.title,
+            currency: a.currency
+        })),
+        completedNumbers: exportAllState.completed.map(c => c.accountNumber),
+        failedNumbers: exportAllState.failed.map(f => f.accountNumber),
+        failedDetails: exportAllState.failed,
+        completedDetails: exportAllState.completed,
+        startTime: exportAllState.startTime,
+        refreshCount: (exportAllState.refreshCount || 0),
+        lastRefreshTime: Date.now(),
+        totalProcessed: exportAllState.completed.length + exportAllState.failed.length
+    };
+
+    chrome.storage.local.set({ [EXPORT_SESSION_KEY]: sessionData }, () => {
+        console.log(`[HSBC Bot] Session state saved: ${sessionData.totalProcessed} processed`);
+    });
+}
+
+// Load export session state from Chrome storage
+function loadExportState() {
+    return new Promise((resolve) => {
+        chrome.storage.local.get([EXPORT_SESSION_KEY], (result) => {
+            resolve(result[EXPORT_SESSION_KEY] || null);
+        });
+    });
+}
+
+// Clear export session state from Chrome storage
+function clearExportState() {
+    chrome.storage.local.remove([EXPORT_SESSION_KEY], () => {
+        console.log('[HSBC Bot] Export session cleared');
+    });
+}
+
+// Resume an interrupted export session
+async function resumeExportSession(savedSession) {
+    if (!savedSession || !savedSession.isRunning) {
+        clearExportState();
+        return;
+    }
+
+    // Safety check: abort if too many refreshes without progress
+    if (savedSession.refreshCount >= MAX_REFRESH_COUNT) {
+        logExportAll(`ABORT: ${MAX_REFRESH_COUNT} refreshes without completion - possible infinite loop`);
+        clearExportState();
+        return;
+    }
+
+    logExportAll('=== RESUMING EXPORT SESSION ===');
+    logExportAll(`Session: ${savedSession.sessionId}`);
+    logExportAll(`Completed: ${savedSession.completedNumbers.length}, Failed: ${savedSession.failedNumbers.length}`);
+    logExportAll(`Refresh count: ${savedSession.refreshCount + 1}`);
+
+    // Get fresh accounts from current table
+    const freshAccounts = extractAccountsFromTable();
+    if (freshAccounts.length === 0) {
+        logExportAll('No accounts found on page - waiting for table...');
+        try {
+            await waitForElement('table.accounts-table', 15000);
+            await sleep(2000);
+        } catch (e) {
+            logExportAll('Could not find accounts table. Aborting resume.');
+            clearExportState();
+            return;
+        }
+    }
+
+    // Filter out already-processed accounts
+    const processedSet = new Set([
+        ...savedSession.completedNumbers,
+        ...savedSession.failedNumbers
+    ]);
+
+    const remainingAccounts = extractAccountsFromTable().filter(a => !processedSet.has(a.number));
+
+    if (remainingAccounts.length === 0) {
+        // Restore state first
+        exportAllState = {
+            isRunning: true,
+            cancelled: false,
+            isSelectiveExport: savedSession.isSelectiveExport,
+            accounts: [],
+            currentIndex: 0,
+            completed: savedSession.completedDetails || [],
+            failed: savedSession.failedDetails || [],
+            startDate: savedSession.dateRange.from,
+            endDate: savedSession.dateRange.to,
+            startTime: savedSession.startTime,
+            refreshCount: savedSession.refreshCount + 1
+        };
+
+        // For selective exports, we're done (user only selected specific accounts)
+        if (savedSession.isSelectiveExport) {
+            logExportAll('Selective export complete - all selected accounts processed');
+            finishExportAll();
+            return;
+        }
+
+        // For full exports, check if there are more pagination pages
+        logExportAll('Current page complete - checking for next page...');
+        handlePageComplete();
+        return;
+    }
+
+    // Restore state with remaining accounts
+    exportAllState = {
+        isRunning: true,
+        cancelled: false,
+        isSelectiveExport: savedSession.isSelectiveExport,
+        accounts: remainingAccounts,
+        currentIndex: 0,
+        completed: savedSession.completedDetails || [],
+        failed: savedSession.failedDetails || [],
+        startDate: savedSession.dateRange.from,
+        endDate: savedSession.dateRange.to,
+        startTime: savedSession.startTime,
+        refreshCount: (savedSession.refreshCount || 0) + 1
+    };
+
+    logExportAll(`Remaining accounts: ${remainingAccounts.length}`);
+
+    // Show progress bar
+    const totalOriginal = savedSession.allAccountNumbers.length;
+    const alreadyDone = savedSession.completedNumbers.length + savedSession.failedNumbers.length;
+    updateProgress(alreadyDone, totalOriginal, 'Resuming...');
+    updateExportAllButton('working');
+
+    // Continue processing
+    processNextAccount();
+}
 
 // Keep Alive State
 let keepAliveInterval = null;
@@ -1367,11 +1654,36 @@ async function handleExportFlow(e) {
 }
 
 // --- Main Loop ---
+// Pauses during Export All to reduce memory pressure
 setInterval(() => {
-    injectButton();          // Details page button
-    injectExportAllButton(); // List page button
-    injectCheckboxes();      // List page checkboxes
+    // Skip polling when Export All is running to reduce overhead
+    if (exportAllState.isRunning) return;
+
+    injectButton();           // Details page button
+    injectExportAllButton();  // List page button
+    injectCheckboxes();       // List page checkboxes
+    injectQuickLoginButtons(); // Login page quick login
 }, 2000);
+
+// === FIX 2: Check for interrupted export session on page load ===
+// Only on accounts list page, not on details or redirect pages
+if (isAccountsListPage()) {
+    setTimeout(async () => {
+        const savedSession = await loadExportState();
+        if (savedSession && savedSession.isRunning) {
+            log('Found interrupted export session - attempting resume...');
+            // Wait for table to be ready
+            try {
+                await waitForElement('table.accounts-table', 10000);
+                await sleep(2000); // Let page fully settle
+                resumeExportSession(savedSession);
+            } catch (e) {
+                log('Could not resume session - table not found');
+                clearExportState();
+            }
+        }
+    }, 3000); // Wait 3s for page to settle before checking
+}
 
 // ==============================================
 // --- Feature 3: Export All Functions ---
@@ -1586,7 +1898,8 @@ async function handleExportAll(e) {
         failed: [],
         startDate: startDate,
         endDate: endDate,
-        startTime: Date.now()
+        startTime: Date.now(),
+        refreshCount: 0  // FIX 2: Track page refreshes
     };
 
     logExportAll(`Starting: ${accounts.length} accounts`);
@@ -1609,6 +1922,12 @@ async function processNextAccount() {
         logExportAll('Export cancelled by user');
         finishExportAll();
         return;
+    }
+
+    // === FIX 1: Memory cleanup every 10 accounts ===
+    if (currentIndex > 0 && currentIndex % 10 === 0) {
+        console.clear();
+        console.log(`[HSBC Bot] Console cleared at account ${currentIndex} to prevent memory bloat`);
     }
 
     // Check if done with current page
@@ -1694,6 +2013,9 @@ async function processNextAccount() {
         });
         logExportAll(`✓ ${account.number}`);
 
+        // === FIX 2: Save state immediately after success ===
+        saveExportState();
+
     } catch (err) {
         logExportAll(`✗ FAILED: ${account.number} - ${err.message}`);
         // Store full account details with error message
@@ -1703,6 +2025,9 @@ async function processNextAccount() {
             currency: account.currency,
             error: err.message
         });
+
+        // === FIX 2: Save state immediately after failure ===
+        saveExportState();
     }
 
     // 6. Go back to list
@@ -1738,6 +2063,25 @@ async function processNextAccount() {
         }
     }
 
+    // === FIX 2: Check if we should refresh the page to free memory ===
+    const totalProcessed = exportAllState.completed.length + exportAllState.failed.length;
+    const accountsSinceLastRefresh = totalProcessed - ((exportAllState.refreshCount || 0) * ACCOUNTS_PER_REFRESH);
+
+    if (accountsSinceLastRefresh >= ACCOUNTS_PER_REFRESH) {
+        logExportAll(`=== REFRESHING PAGE (${totalProcessed} accounts processed) ===`);
+        logExportAll('Page will reload to free memory. Export will resume automatically.');
+
+        // Save state before refresh
+        saveExportState();
+
+        // Small delay to ensure storage write completes
+        await sleep(500);
+
+        // Reload the page - the session will be detected and resumed on load
+        location.reload();
+        return; // Stop processing - will resume after reload
+    }
+
     // 8. Move to next account
     exportAllState.currentIndex++;
     processNextAccount();
@@ -1763,12 +2107,23 @@ async function handlePageComplete() {
             await waitForElement('table.accounts-table', 10000);
             await sleep(1500); // Let table populate fully
 
-            // Reset for new page
-            exportAllState.accounts = extractAccountsFromTable();
+            // Extract accounts from new page
+            const allAccountsOnPage = extractAccountsFromTable();
+
+            // Filter out already-processed accounts (prevent duplicates after pagination)
+            const processedSet = new Set([
+                ...exportAllState.completed.map(c => c.accountNumber),
+                ...exportAllState.failed.map(f => f.accountNumber)
+            ]);
+
+            const remainingAccounts = allAccountsOnPage.filter(a => !processedSet.has(a.number));
+
+            // Reset for new page with filtered accounts
+            exportAllState.accounts = remainingAccounts;
             exportAllState.currentIndex = 0;
 
             if (exportAllState.accounts.length > 0) {
-                logExportAll(`Next page: ${exportAllState.accounts.length} accounts`);
+                logExportAll(`Next page: ${exportAllState.accounts.length} accounts (${allAccountsOnPage.length - remainingAccounts.length} already processed)`);
                 processNextAccount();
                 return;
             }
@@ -2236,6 +2591,9 @@ function finishExportAll() {
 
     exportAllState.isRunning = false;
     updateExportAllButton(cancelled ? 'idle' : 'done');
+
+    // === FIX 2: Clear session state - export is truly complete ===
+    clearExportState();
 }
 
 // --- Track current export for verification ---

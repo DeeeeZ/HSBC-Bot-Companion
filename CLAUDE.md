@@ -16,6 +16,7 @@ Chrome extension (Manifest V3) automating HSBCnet banking portal workflows. Desi
 - **RPA Status Polling** - `data-status` attribute (`idle`/`exporting`/`done`/`error`) for PAD integration
 - **Keep Alive** - Prevents 5-min session timeout with activity simulation every 1 min (ON by default)
 - **Keyboard Shortcuts** - `Alt+Shift+E` for Export All, `Alt+Shift+X` for Auto Export
+- **Quick Login** - Hardcoded username buttons on login page + auto-click 2FA Continue
 - Download-triggered auto-close of redirect windows
 
 ## Architecture
@@ -30,6 +31,7 @@ native-host/    → Native Messaging Host for bank reconciliation (Python)
 
 **Page Detection (content.js):**
 
+- Login Page: `isLoginPage()` - URL contains `DSP_AUTHENTICATION`
 - Accounts List: `isAccountsListPage()` - hash contains `/accounts` or `/landing` (NOT `/accounts/details/`)
 - Account Details: hash contains `/accounts/details/`
 - Redirect Page: URL contains `GIBRfdRedirect`
@@ -51,11 +53,13 @@ native-host/    → Native Messaging Host for bank reconciliation (Python)
 exportAllState = {
   isRunning, cancelled, isSelectiveExport,
   accounts[], currentIndex, completed[], failed[],
-  startDate, endDate, startTime
+  startDate, endDate, startTime, refreshCount
 }
 ```
 
 **Flow:** `handleExportAll()` → `processNextAccount()` → (loop) → `handlePageComplete()` → `finishExportAll()`
+
+**Memory Management:** Export All now includes automatic page refresh every 25 accounts to prevent HSBCnet's SPA from consuming too much memory. State is persisted to `chrome.storage.local` and automatically resumed after refresh.
 
 **Selective Export Flow:**
 
@@ -113,6 +117,14 @@ F12 DevTools on HSBCnet page → Console (filter by "[HSBC Bot]")
 
 ## Key Selectors
 
+### Login Page
+
+| Element              | Selector                                     |
+| -------------------- | -------------------------------------------- |
+| Username Input       | `input#userid`                               |
+| Continue Button      | `button[data-test-id="autoTestCDLButton"]`   |
+| Quick Login Container| `#hsbc-quick-login-container`                |
+
 ### Accounts List Page
 
 | Element             | Selector                                                  |
@@ -165,6 +177,11 @@ F12 DevTools on HSBCnet page → Console (filter by "[HSBC Bot]")
 | `toggleKeepAlive()`                          | Toggles session keep-alive interval (1 min activity simulation) |
 | `saveExportHistory(record)`                  | Persists export session to Chrome storage                       |
 | `downloadExportLog(exportData)`              | Auto-downloads JSON log with completed/failed accounts          |
+| `saveExportState()`                          | Persists current export progress for page refresh resume        |
+| `loadExportState()`                          | Loads interrupted export session from storage                   |
+| `clearExportState()`                         | Clears export session state when complete                       |
+| `resumeExportSession(savedSession)`          | Resumes an interrupted export after page refresh                |
+| `injectQuickLoginButtons()`                  | Injects username buttons on login page, auto-clicks 2FA        |
 
 ## RPA Integration [Optional]
 
@@ -335,6 +352,10 @@ Chrome automatically creates the folders if they don't exist. The date uses ISO 
 - Download context expires after 60s
 - Export history: max 50 records (FIFO)
 - HSBCnet DOM changes may break selectors
+- Page refresh: Every 25 accounts to free memory
+- Max refreshes: 15 (abort if exceeded to prevent infinite loop)
+- Console clear: Every 10 accounts to prevent memory bloat
+- Logger entries: Max 20 lines (auto-trimmed)
 
 ## Injected UI Components
 
@@ -357,3 +378,6 @@ Chrome automatically creates the folders if they don't exist. The date uses ISO 
 | Checkboxes not appearing | `checkboxesInjected` flag true from prior run | Refresh page or reset flag                    |
 | Date modal not showing   | `showDateModal()` not called                  | Check `handleExportAll()` entry point         |
 | Keep Alive not working   | Event targets not found                       | Verify `document.body` exists before dispatch |
+| Export resumes but slow  | HSBCnet memory bloat                          | Page refreshes every 25 accounts automatically |
+| "ABORT: refreshes"       | Too many refreshes without progress           | Check if accounts list is empty or login expired |
+| Duplicates in export     | State not properly saved before refresh       | Check `chrome.storage.local` for stale session |
