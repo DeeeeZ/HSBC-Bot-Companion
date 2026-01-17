@@ -1041,7 +1041,8 @@ let exportAllState = {
     startDate: '',       // dd/mm/yyyy
     endDate: '',         // dd/mm/yyyy
     startTime: null,     // For duration tracking
-    refreshCount: 0      // FIX 2: Track page refreshes for memory management
+    refreshCount: 0,     // FIX 2: Track page refreshes for memory management
+    totalAccounts: null  // Total from footer for reliable termination
 };
 
 // === FIX 2: State Persistence for Page Refresh ===
@@ -1072,7 +1073,8 @@ function saveExportState() {
         startTime: exportAllState.startTime,
         refreshCount: (exportAllState.refreshCount || 0),
         lastRefreshTime: Date.now(),
-        totalProcessed: exportAllState.completed.length + exportAllState.failed.length
+        totalProcessed: exportAllState.completed.length + exportAllState.failed.length,
+        totalAccounts: exportAllState.totalAccounts  // Total from footer for termination
     };
 
     chrome.storage.local.set({ [EXPORT_SESSION_KEY]: sessionData }, () => {
@@ -1150,7 +1152,8 @@ async function resumeExportSession(savedSession) {
             startDate: savedSession.dateRange.from,
             endDate: savedSession.dateRange.to,
             startTime: savedSession.startTime,
-            refreshCount: savedSession.refreshCount + 1
+            refreshCount: savedSession.refreshCount + 1,
+            totalAccounts: savedSession.totalAccounts || getTotalAccountCount()
         };
 
         // For selective exports, we're done (user only selected specific accounts)
@@ -1178,7 +1181,8 @@ async function resumeExportSession(savedSession) {
         startDate: savedSession.dateRange.from,
         endDate: savedSession.dateRange.to,
         startTime: savedSession.startTime,
-        refreshCount: (savedSession.refreshCount || 0) + 1
+        refreshCount: (savedSession.refreshCount || 0) + 1,
+        totalAccounts: savedSession.totalAccounts || getTotalAccountCount()
     };
 
     logExportAll(`Remaining accounts: ${remainingAccounts.length}`);
@@ -1807,6 +1811,18 @@ function extractAccountsFromTable() {
     return accounts;
 }
 
+// Get total account count from footer pagination label
+function getTotalAccountCount() {
+    const totalElement = document.querySelector('#pagination-dropdown-show-suffix');
+    if (totalElement) {
+        const match = totalElement.textContent.match(/Total:\s*(\d+)/i);
+        if (match) {
+            return parseInt(match[1], 10);
+        }
+    }
+    return null; // Fallback: unknown total
+}
+
 // Task 8: Button state updates
 function updateExportAllButton(state) {
     const btn = document.getElementById('hsbc-bot-export-all-btn');
@@ -1887,6 +1903,9 @@ async function handleExportAll(e) {
     // Check if this is a selective export (user unchecked some accounts)
     const isSelectiveExport = totalAccountsOnPage > 0 && accounts.length < totalAccountsOnPage;
 
+    // Get total account count from footer for reliable termination
+    const totalAccounts = getTotalAccountCount();
+
     // Initialize state
     exportAllState = {
         isRunning: true,
@@ -1899,10 +1918,11 @@ async function handleExportAll(e) {
         startDate: startDate,
         endDate: endDate,
         startTime: Date.now(),
-        refreshCount: 0  // FIX 2: Track page refreshes
+        refreshCount: 0,  // FIX 2: Track page refreshes
+        totalAccounts: totalAccounts  // Total from footer for termination check
     };
 
-    logExportAll(`Starting: ${accounts.length} accounts`);
+    logExportAll(`Starting: ${accounts.length} accounts (Total across all pages: ${totalAccounts || 'unknown'})`);
     logExportAll(`Date: ${startDate} to ${endDate}`);
     updateExportAllButton('working');
 
@@ -2127,12 +2147,26 @@ async function handlePageComplete() {
                 processNextAccount();
                 return;
             }
+
+            // This page has no new accounts - check if we need to continue to more pages
+            const totalProcessed = exportAllState.completed.length + exportAllState.failed.length;
+            const totalAccounts = exportAllState.totalAccounts;
+
+            if (totalAccounts && totalProcessed < totalAccounts) {
+                // More accounts exist on other pages - keep navigating
+                logExportAll(`Page fully processed. Progress: ${totalProcessed}/${totalAccounts} - checking next page...`);
+                // Recursive call to navigate to next page
+                handlePageComplete();
+                return;
+            }
         } catch (err) {
             logExportAll(`Pagination error: ${err.message}`);
         }
     }
 
-    // No more pages - finish
+    // Truly done - either hit total or no more pages
+    const totalProcessed = exportAllState.completed.length + exportAllState.failed.length;
+    logExportAll(`Export complete: ${totalProcessed} accounts processed`);
     finishExportAll();
 }
 

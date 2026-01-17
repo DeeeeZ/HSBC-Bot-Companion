@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Chrome extension (Manifest V3) automating HSBCnet banking portal workflows. Designed for both human and RPA bot usage.
+Chrome extension (Manifest V3, v2.5) automating HSBCnet banking portal workflows. Designed for both human and RPA bot usage.
 
 **Features:**
 
@@ -53,13 +53,15 @@ native-host/    → Native Messaging Host for bank reconciliation (Python)
 exportAllState = {
   isRunning, cancelled, isSelectiveExport,
   accounts[], currentIndex, completed[], failed[],
-  startDate, endDate, startTime, refreshCount
+  startDate, endDate, startTime, refreshCount, totalAccounts
 }
 ```
 
 **Flow:** `handleExportAll()` → `processNextAccount()` → (loop) → `handlePageComplete()` → `finishExportAll()`
 
 **Memory Management:** Export All now includes automatic page refresh every 25 accounts to prevent HSBCnet's SPA from consuming too much memory. State is persisted to `chrome.storage.local` and automatically resumed after refresh.
+
+**Pagination Termination:** Uses `totalAccounts` (extracted from footer "Total: X") to reliably determine when all accounts across all pages have been processed. Only calls `finishExportAll()` when `completed + failed >= totalAccounts`.
 
 **Selective Export Flow:**
 
@@ -169,6 +171,7 @@ F12 DevTools on HSBCnet page → Console (filter by "[HSBC Bot]")
 | `waitForButtonText(selector, text, timeout)` | Waits for button text change                                    |
 | `safeSetValue(element, value)`               | Robust date input setter with event dispatch                    |
 | `extractAccountsFromTable()`                 | Parses account list with currency grouping                      |
+| `getTotalAccountCount()`                     | Extracts total from footer for reliable pagination termination  |
 | `findRowByAccountNumber(num)`                | Re-finds row after DOM refresh                                  |
 | `extractAccountInfoFromDetailsPage()`        | Extracts title/number/currency from details page header         |
 | `injectCheckboxes()`                         | Adds selection checkboxes to account rows                       |
